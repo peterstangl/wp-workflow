@@ -85,8 +85,15 @@ wp-workflow/
 ├── SKILL.md                   ← skill spec (Claude Code reads this)
 └── templates/
     ├── CLAUDE.md.tmpl         ← scaffold for a project's CLAUDE.md
-    └── PLAN.md.tmpl           ← scaffold for a project's docs/PLAN.md
+    ├── PLAN.md.tmpl           ← scaffold for a project's docs/PLAN.md
+    └── gitignore/
+        ├── python.gitignore   ← GitHub's Python template
+        └── latex.gitignore    ← GitHub's TeX template
 ```
+
+`bootstrap` asks whether the new project uses Python and/or LaTeX and,
+if so, emits a merged starter `.gitignore` in the target repo alongside
+`CLAUDE.md` and `docs/PLAN.md`.
 
 ## Future: plugin packaging
 

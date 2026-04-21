@@ -51,6 +51,7 @@ Ask only what you actually need; don't run down a checklist mechanically. What u
 - What is in scope and out of scope?
 - Are there hard rules you want every session to follow? (data provenance, tooling purity, naming, coding style)
 - What work packages do you see, at a first pass? (titles + one-line done-criteria is enough)
+- Does this project use Python, LaTeX, both, or neither? (controls the starter `.gitignore` — see step 4)
 
 Use `AskUserQuestion` for multiple-choice clarifications; plain text questions otherwise.
 
@@ -79,7 +80,17 @@ Templates are scaffolds, not boilerplate to inject verbatim. Prefer a shorter, t
 
 ### Step 4 — `ExitPlanMode`
 
-After approval, write the two files into the target repo and stop. Do not commit.
+After approval, write the artefacts into the target repo and stop. Do not commit.
+
+Artefacts to write:
+
+1. `CLAUDE.md` (from the draft).
+2. `docs/PLAN.md` (from the draft).
+3. A starter `.gitignore` at the repo root, **only if the project uses Python and/or LaTeX** and the repo does not already have a `.gitignore`. Source the content from:
+   - [templates/gitignore/python.gitignore](templates/gitignore/python.gitignore)
+   - [templates/gitignore/latex.gitignore](templates/gitignore/latex.gitignore)
+
+   If both apply, concatenate them with a clear section separator (e.g. `# --- Python ---` and `# --- LaTeX ---` headers) so the origin of each block stays obvious when the user edits it later. If neither applies, skip the file. If a `.gitignore` already exists, leave it alone and mention in the summary that it was preserved — the user can merge by hand.
 
 ---
 
