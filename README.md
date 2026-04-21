@@ -36,6 +36,37 @@ Claude Code picks the skill up automatically. No other setup needed.
 
 To update later: `git -C ~/.claude/skills/wp-workflow pull`.
 
+## Availability
+
+User-level skills in `~/.claude/skills/` are auto-discovered and
+available in **every Claude Code session across every repo** — no
+per-project install. The skill appears in the available-skills list at
+session start, so if you just cloned or edited the skill, open a fresh
+session (or `/clear`) to pick up the changes.
+
+## How to use it
+
+The skill responds to two styles of invocation:
+
+- **Explicit slash command** — type `/wp-workflow` followed by the
+  entry-point args. Tab-completion on `/` surfaces the name.
+
+  ```
+  /wp-workflow bootstrap
+  /wp-workflow implement WP13
+  /wp-workflow archive-plan
+  /wp-workflow retrospect
+  ```
+
+- **Natural language** — say what you want in plain English. The skill's
+  description is tuned to trigger even when you don't name it, e.g.
+  *"bootstrap a new repo in the WP style"*, *"implement WP13"*,
+  *"compress docs/PLAN.md"*, *"let's fold these lessons back into the
+  wp-workflow skill"*.
+
+Either path enters plan mode before any code changes, so you always get
+to review the per-session plan before implementation starts.
+
 ## Invariants
 
 Baked into the skill, applied on every entry point:
