@@ -1,0 +1,57 @@
+# {{project_name}} — plan
+
+{{Archive pointer lives here after the first `archive-plan` run, e.g.:
+"Full history: [PLAN-archive-YYYY-MM-DD.md](PLAN-archive-YYYY-MM-DD.md)."
+Leave empty until then.}}
+
+## Scope
+
+**In scope:** {{what the project covers, in one paragraph or a short
+bulleted list}}
+
+**Out of scope (for now):** {{what is deliberately deferred, with a
+one-line reason per item if useful}}
+
+Standing conventions live in [CLAUDE.md](../CLAUDE.md) — they are not
+duplicated here. Read them first.
+
+## Work packages
+
+Each WP is sized to be completed in a single Claude session. An open WP
+stays in full detail here; once closed (marked `[x]` in CLAUDE.md), it
+can be compressed into the *Completed WPs* section by the
+`wp-workflow archive-plan` entry point.
+
+### WP1 — {{title}}
+
+**Goal.** {{one paragraph describing what this WP produces and why}}
+
+**Inputs.** {{existing code, data, or resources to build on, with paths}}
+
+**Deliverables.** {{what will exist at the end — modules, tests, data
+files, documentation updates}}
+
+**Done criteria.** {{concrete, verifiable bullets — the specific things
+that must be true before this WP is `[x]`. Each bullet should be
+answerable with "yes" or "no".}}
+
+**Cross-references.** {{pointers to relevant items in the resource map
+or elsewhere in CLAUDE.md, so the implementing session knows what to
+read first}}
+
+---
+
+### WP2 — {{title}}
+
+{{same structure as WP1}}
+
+---
+
+{{… one section per planned WP …}}
+
+## Completed WPs
+
+{{`archive-plan` writes one-line summaries here, pointing at the archive
+file for full detail. Until then, completed WPs are tracked only in
+CLAUDE.md's work-package-status checklist. Do not duplicate their full
+bodies back into this file after compression.}}
