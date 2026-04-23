@@ -21,6 +21,8 @@ These two rules apply everywhere in this skill and override anything below that 
 
 **2. Stay inside the current repository.** Only edit files inside the repo the user is working in. Do not write to, delete from, or reorganise anything outside it — including the user's home dir, sibling repos, or this skill's own files — without an explicit instruction in the current session.
 
+**3. Context is a budget, not a free resource.** Prefer narrow reads (`offset`/`limit`, targeted `Grep`) over whole-file reads. For anything large or broad, delegate to `Agent(subagent_type="Explore")` with a specific question — the subagent's summary enters context, not the raw file. At WP close, check file sizes and invoke `archive-plan` if `CLAUDE.md > 500 lines` or `docs/PLAN.md > 800 lines`.
+
 ## Picking the entry point
 
 Use `args` to choose:
@@ -102,15 +104,21 @@ Goal: complete one work package cleanly, leaving the repo in a state where the u
 
 Call `EnterPlanMode` **before any reads of implementation files**. This is the skill's central guard. The project-level `docs/PLAN.md` says *what* a WP is; the per-session plan file says *how* to do it in this repo right now. Skipping plan mode collapses those two levels and the session drifts into implementation before the user has seen the approach.
 
-### Step 2 — read project context
+### Step 2 — read project context, scoped to the WP
+
+Every line you pull into context shrinks the budget for actual implementation later — the constraint is *resources*, not the project docs.
 
 In order:
 
-1. The repo's `CLAUDE.md`.
-2. `docs/PLAN.md` — focus on the requested WP and its dependencies.
-3. The specific resources the WP entry references.
+1. The repo's `CLAUDE.md` — read in full.
+2. `docs/PLAN.md` — read in full if it's short enough to be cheap; focus your attention on the requested WP and its direct dependencies but don't be afraid to skim neighbours for context.
+3. The resources the WP entry references — **be selective**:
+   - Not every WP needs every resource the project lists in its *Resource map*. Open only what this specific WP's goal requires.
+   - Small files (< ~2000 lines): read directly, including orientation skims — scanning a short reference to get your bearings is cheap and often the right move.
+   - Large files (multi-MB data files, long papers, legacy modules where you only need a narrow fact): don't orient in-session. Delegate to `Agent(subagent_type="Explore")` with the specific question you're trying to answer — the subagent does the orientation + drill-down and returns only a distilled summary. If you don't yet know what you're looking for, the subagent's first job can be to locate the relevant section (abstract, TOC, grep result) and report back.
+   - Before opening a large file directly, pause and ask: could a subagent answer this?
 
-Read the minimum needed to design a good plan. You are not trying to understand the whole repo.
+You are collecting just enough to write a defensible per-WP plan, not trying to understand the whole repo.
 
 ### Step 3 — write the per-WP plan
 
@@ -130,37 +138,61 @@ After approval, execute the plan. Keep all edits inside the current repo.
 
 As the final step of the session, before handing back for the user to commit:
 
-- Update `CLAUDE.md`: mark the WP `[x]` with a one-line summary and links to the closing code/tests. Add any new modules, data files, or conventions the WP introduced.
-- Update `docs/PLAN.md`: refine upcoming WPs if what you learned changes them. Don't retell the WP — the diff, plus the `CLAUDE.md` entry, is the record.
+1. Update `CLAUDE.md`: mark the WP `[x]` with a one-line summary and links to the closing code/tests. Add any new modules, data files, or conventions the WP introduced. **Keep completed-WP entries to one line each** — the git history and the closing diff are the record of how the WP was done; `CLAUDE.md` is a living guide, not a changelog.
+2. Update `docs/PLAN.md`: refine upcoming WPs if what you learned changes them. Don't retell the WP — the diff is the record.
+3. **Check the size of both files.** Run `wc -l CLAUDE.md docs/PLAN.md`. If either exceeds the archive threshold (see below), run the `archive-plan` entry point in-line before handing off. Do this as the final sub-step so the user reviews one coherent diff: WP changes + archive, in that order.
 
 Then summarise in chat what changed and what the user should check before committing. Do not run any git mutation.
+
+**Archive thresholds.** Trigger `archive-plan` when either `CLAUDE.md > 500 lines` or `docs/PLAN.md > 800 lines`. These are rules of thumb, not hard limits — use judgement if the file is genuinely all still load-bearing.
 
 ---
 
 ## Entry point: `archive-plan`
 
-Goal: compress a long `docs/PLAN.md` without losing history.
+Goal: compress `CLAUDE.md` and/or `docs/PLAN.md` without losing history, so every future session starts with a smaller auto-loaded footprint.
+
+The two files serve different roles and compress differently:
+
+- `docs/PLAN.md` — per-WP detail for closed work goes away; open WPs stay verbatim.
+- `CLAUDE.md` — paragraph-long completed-WP entries collapse to one line each; standing conventions, resource map, and repo layout stay verbatim.
+
+Never delete; always back up first.
 
 ### Step 1 — require a clean tree
 
-Check `git status`. Refuse to proceed on a dirty working tree: the archive operation must land as one reviewable diff. Ask the user to commit or stash first. Do not stash for them.
+Check `git status`. Refuse to proceed on a dirty working tree: the archive operation must land as one reviewable diff (or be stacked on top of the same WP's changes, when invoked from `implement` Step 5). Ask the user to commit or stash first. Do not stash for them.
 
-### Step 2 — copy verbatim
+### Step 2 — copy both files verbatim to dated backups
 
-Copy `docs/PLAN.md` to `docs/PLAN-archive-YYYY-MM-DD.md` (today's date). No edits to the archive — it is the backup.
+For each file that crosses its threshold, or that the user explicitly names, copy it to a dated archive:
 
-### Step 3 — rewrite `docs/PLAN.md`
+- `docs/PLAN.md` → `docs/PLAN-archive-YYYY-MM-DD.md`
+- `CLAUDE.md` → `docs/CLAUDE-archive-YYYY-MM-DD.md` (goes into `docs/` so the repo root stays clean)
 
-Replace the live file with:
+No edits to archives — they are the backup. If a same-day archive already exists, append a short suffix (`-2`, `-3`, …); do **not** overwrite.
 
-- An archive-link line at the top: *Full history: [PLAN-archive-YYYY-MM-DD.md](PLAN-archive-YYYY-MM-DD.md).*
+### Step 3 — rewrite the live files
+
+**`docs/PLAN.md`** becomes:
+
+- Archive-link line at the top: *Full history: [PLAN-archive-YYYY-MM-DD.md](PLAN-archive-YYYY-MM-DD.md).*
 - The scope section and the pointer to `CLAUDE.md` conventions.
-- A *Completed WPs* section with one bullet per `[x]` WP — one line of summary each. Do **not** retain the per-WP detail for completed work; that's why the archive exists.
+- A *Completed WPs* section with one bullet per `[x]` WP — one line of summary each.
 - All still-open WPs in full, unchanged.
+
+**`CLAUDE.md`** becomes:
+
+- Archive-link line near the top (above *Work-package status*): *Full completed-WP history: [docs/CLAUDE-archive-YYYY-MM-DD.md](docs/CLAUDE-archive-YYYY-MM-DD.md).*
+- Every section *except* *Work-package status* stays verbatim.
+- In *Work-package status*, every completed WP collapses to a single line: `- [x] **WPx** — <one-line summary>`. Links to closing code/tests are fine if they fit on that line; paragraph-long recaps of what was done go to the archive only.
+- Open WPs stay as they were.
+
+Keep the two files non-redundant: if a piece of information is in `CLAUDE.md`, don't duplicate it in `docs/PLAN.md`, and vice versa. The two summaries for a closed WP — the `CLAUDE.md` line and the `docs/PLAN.md` bullet — should say different things (CLAUDE.md: "what lives in the repo now", PLAN.md: "what was delivered"); if they end up the same, drop the PLAN.md one.
 
 ### Step 4 — report and stop
 
-Tell the user the line-count reduction and ask them to eyeball the new file before committing. Do not commit for them.
+Report the line-count reduction for each file and ask the user to eyeball both new files plus the archives before committing. Do not commit for them.
 
 ---
 
