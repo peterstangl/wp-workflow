@@ -54,6 +54,7 @@ Ask only what you actually need; don't run down a checklist mechanically. What u
 - Are there hard rules you want every session to follow? (data provenance, tooling purity, naming, coding style)
 - What work packages do you see, at a first pass? (titles + one-line done-criteria is enough)
 - Does this project use Python, LaTeX, both, or neither? (controls the starter `.gitignore` — see step 4)
+- For a public-visibility repo: how should `CLAUDE.md` and `docs/PLAN.md` be stored — **tracked in this repo** (default for private/personal repos), **excluded-only** via `.git/info/exclude` (files live in-place, no version history of the private files), or **symlinked to a private context repo** (files live elsewhere, symlinks in this repo point at them, giving version history via the context repo)? Use `AskUserQuestion` with those three options. If the user picks symlink mode, follow up with a text question for the private dir path (default: `~/claude-private/<basename of the target repo>`) and persist the chosen parent (`~/claude-private` in the default case) as a `user` memory (`default-private-context-repo`) so future bootstraps pre-fill it. Controls step 4's branching.
 
 Use `AskUserQuestion` for multiple-choice clarifications; plain text questions otherwise.
 
@@ -86,13 +87,38 @@ After approval, write the artefacts into the target repo and stop. Do not commit
 
 Artefacts to write:
 
-1. `CLAUDE.md` (from the draft).
-2. `docs/PLAN.md` (from the draft).
-3. A starter `.gitignore` at the repo root, **only if the project uses Python and/or LaTeX** and the repo does not already have a `.gitignore`. Source the content from:
+1. `CLAUDE.md` and `docs/PLAN.md` (from the drafts) — where they land depends on the Step 2 privacy choice:
+
+   - **Track in this repo (default)** — write at the conventional repo-root paths.
+   - **Exclude only** — append three lines to `.git/info/exclude` (creating it if absent):
+     ```
+     /CLAUDE.md
+     /docs/PLAN.md
+     /docs/PLAN-archive-*.md
+     ```
+     Then write the two files at the conventional paths. Note in the closing summary that `.git/info/exclude` is per-clone; if the user re-clones, they must recreate these entries before their first `git add`.
+   - **Symlink to private context repo** — let `$PRIVATE` be the path the user gave:
+     1. If the target repo already has a non-empty `docs/`, abort cleanly: report the conflict and ask the user to move or rename its contents (or pick a different privacy mode) before re-running bootstrap. The directory symlink in step 4 would otherwise shadow existing content.
+     2. Create `$PRIVATE/docs/` if it doesn't exist.
+     3. Write `CLAUDE.md` to `$PRIVATE/CLAUDE.md` and the `docs/PLAN.md` draft to `$PRIVATE/docs/PLAN.md`.
+     4. Create absolute symlinks in the target repo:
+        - `<repo>/CLAUDE.md → $PRIVATE/CLAUDE.md` (file symlink).
+        - `<repo>/docs → $PRIVATE/docs` (**directory** symlink — so anything later written under `docs/`, including `archive-plan`'s dated backups, automatically lands in the private repo with no special-casing in archive-plan).
+     5. Append two lines to `.git/info/exclude` (creating it if absent):
+        ```
+        /CLAUDE.md
+        /docs
+        ```
+        The directory symlink is excluded as a single path; nothing under it needs listing because git doesn't descend into an ignored path.
+     6. In the closing summary, recommend the user `git init` `$PRIVATE` (or its parent, if one private repo holds multiple project subdirs) for version history.
+
+   If the target repo has not been `git init`-ed yet, the exclude-only and symlink branches must abort cleanly: report which `.git/info/exclude` paths and (for the symlink branch) which symlinks would have been created, write the markdown files only after the user confirms in a follow-up, and tell them to add the exclude entries before their first `git add`.
+
+2. A starter `.gitignore` at the repo root, **only if the project uses Python and/or LaTeX** and the repo does not already have a `.gitignore`. Source the content from:
    - [templates/gitignore/python.gitignore](templates/gitignore/python.gitignore)
    - [templates/gitignore/latex.gitignore](templates/gitignore/latex.gitignore)
 
-   If both apply, concatenate them with a clear section separator (e.g. `# --- Python ---` and `# --- LaTeX ---` headers) so the origin of each block stays obvious when the user edits it later. If neither applies, skip the file. If a `.gitignore` already exists, leave it alone and mention in the summary that it was preserved — the user can merge by hand.
+   If both apply, concatenate them with a clear section separator (e.g. `# --- Python ---` and `# --- LaTeX ---` headers) so the origin of each block stays obvious when the user edits it later. If neither applies, skip the file. If a `.gitignore` already exists, leave it alone and mention in the summary that it was preserved — the user can merge by hand. The `.gitignore` is always tracked publicly; the privacy logic lives in `.git/info/exclude`, not here, so a public `.gitignore` doesn't advertise the private files' existence.
 
 ---
 
