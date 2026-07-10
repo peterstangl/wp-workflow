@@ -1,21 +1,22 @@
 ---
 name: wp-workflow
-description: Bootstrap and run a work-package-based project workflow. Use when the user wants to set up a new repo with a CLAUDE.md + docs/PLAN.md structure, work on a specific WP ("implement WP3", "work on WP2", "continue with WP5", "start WP7"), or compress a long docs/PLAN.md once many WPs are complete. Trigger whenever the user mentions work packages, WPs, or asks to bootstrap / implement / archive project plans in this style, even if they don't name the skill. The value of invoking is getting the session into plan mode *before* any code changes, which is the central guardrail of the workflow.
+description: Bootstrap and run a work-package-based project workflow. Use when the user wants to set up a new repo with a CLAUDE.md + docs/PLAN.md structure, work on a specific WP ("implement WP3", "work on WP2", "continue with WP5", "start WP7"), add or re-scope a WP in the plan, or compress a long docs/PLAN.md once many WPs are complete. Trigger whenever the user mentions work packages, WPs, or asks to bootstrap / implement / amend / archive project plans in this style, even if they don't name the skill. The value of invoking is getting the session into plan mode *before* any code or plan changes, which is the central guardrail of the workflow.
 ---
 
 # wp-workflow
 
-A meta-workflow skill for projects structured around numbered work packages (WPs). It encodes three routines:
+A meta-workflow skill for projects structured around numbered work packages (WPs). It encodes four routines:
 
 1. **Bootstrap** a new repo in plan mode: produce a repo-local `CLAUDE.md` (standing conventions, resource map, repo layout, WP status) plus `docs/PLAN.md` (scope, per-WP done-criteria).
 2. **Implement one WP at a time**: every "implement WPx" session re-enters plan mode first, writes a detailed per-WP plan, gets approval, implements, then updates `CLAUDE.md` and `docs/PLAN.md` so the user can commit.
-3. **Archive** `docs/PLAN.md` when it grows long: copy verbatim to a dated archive file and replace the live file with a compressed summary plus archive link.
+3. **Amend** the plan in plan mode: add, re-scope, re-order, or drop a WP outside an implement session, numbering it so its id says whether it refines an existing WP or is independent of it.
+4. **Archive** `docs/PLAN.md` when it grows long: copy verbatim to a dated archive file and replace the live file with a compressed summary plus archive link.
 
 The structural idea is **nested plans**. A coarse, stable plan lives in `docs/PLAN.md`; a fresh, detailed plan per session lives in the plan file that plan mode provides. That split keeps each session focused, keeps the main plan readable, and records why decisions were made.
 
 ## Invariants that apply to every entry point
 
-These two rules apply everywhere in this skill and override anything below that might read otherwise.
+These three rules apply everywhere in this skill and override anything below that might read otherwise.
 
 **1. The user owns version control.** Never run `git add`, `git commit`, `git push`, `git rm`, `git reset`, `git stash`, or any other git command that mutates history or the working tree, and never propose to. Summarise what changed in plain text and let the user commit. Read-only git commands (`git status`, `git diff`, `git log`) are fine to confirm state.
 
@@ -29,10 +30,11 @@ Use `args` to choose:
 
 - `bootstrap` — new repo, first-time setup.
 - `implement <WP-id>` — the user says "implement WP3", "work on WP2", "continue with WP5", or similar. Aliases: `run-wp`, `wp`.
+- `amend-plan` — add, re-scope, re-order, or drop a WP in `docs/PLAN.md`, outside an implement session.
 - `archive-plan` — compress a long `docs/PLAN.md`.
 - `retrospect` — harvest lessons from a project that has used this skill and fold them back into `SKILL.md` or the templates.
 
-If the user's phrasing matches one of these but they didn't name the skill, invoke anyway — getting into plan mode before code changes is what the skill buys.
+If the user's phrasing matches one of these but they didn't name the skill, invoke anyway — getting into plan mode before code *or plan* changes is what the skill buys.
 
 ---
 
@@ -171,6 +173,33 @@ As the final step of the session, before handing back for the user to commit:
 Then summarise in chat what changed and what the user should check before committing. Do not run any git mutation.
 
 **Archive thresholds.** Trigger `archive-plan` when either `CLAUDE.md > 500 lines` or `docs/PLAN.md > 800 lines`. These are rules of thumb, not hard limits — use judgement if the file is genuinely all still load-bearing.
+
+---
+
+## Entry point: `amend-plan`
+
+Goal: change the *shape* of the work — add a WP, re-scope one, re-order them, drop one — outside an implement session.
+
+### Step 1 — enter plan mode before writing
+
+Call `EnterPlanMode`, draft the WP entry in the plan file in the same shape as its neighbours (goal, inputs, deliverables, done criteria), and get approval. Only then write it into `docs/PLAN.md` and add its one-line status entry to `CLAUDE.md`. The coarse plan outlives the session and every future agent reads it, so it earns the same review gate as the code.
+
+### Step 2 — number it without renumbering anything
+
+Never renumber existing WPs: their ids are referenced from `CLAUDE.md`, from memories, and from git history. Insert instead, and let the id say what the WP *is*:
+
+| Form | Meaning | Example |
+|---|---|---|
+| `WPx` | a top-level work package | `WP3` |
+| `WPx.y` | a **refinement** of WPx's subject | `WP3.2` |
+| `WPx/n` | the n-th **independent** WP inserted after WPx | `WP3/1` |
+| `WPx/n.m` | a refinement of that inserted WP | `WP3/1.2` |
+
+Pick the lowest free number in the relevant form. Because ASCII `.` < `/` < digits, a plain byte sort already lists ids in reading order (`WP3, WP3.2, WP3/1, WP4`) with no special-casing.
+
+### Not gated
+
+Marking a WP `[x]` and refining upcoming WPs as `implement` Step 5, and the rewrites `archive-plan` performs, both run under that session's existing approval — do not re-gate them. Reporting status or answering "what's next" is read-only and needs nothing.
 
 ---
 
