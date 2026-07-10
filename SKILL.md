@@ -48,7 +48,7 @@ Call `EnterPlanMode` before any reads of the target repo. The drafts go into the
 
 ### Step 2 — interview the user
 
-Ask only what you actually need; don't run down a checklist mechanically. What usually matters:
+Ask only what you actually need; don't run down a checklist mechanically — except the storage question below, which is mandatory on every bootstrap. What usually matters:
 
 - What is the project and why does it exist? (one paragraph of "core idea")
 - What inputs/resources does the project build on? (external docs, data files, reference implementations)
@@ -56,7 +56,8 @@ Ask only what you actually need; don't run down a checklist mechanically. What u
 - Are there hard rules you want every session to follow? (data provenance, tooling purity, naming, coding style)
 - What work packages do you see, at a first pass? (titles + one-line done-criteria is enough)
 - Does this project use Python, LaTeX, both, or neither? (controls the starter `.gitignore` — see step 4)
-- For a public-visibility repo: how should `CLAUDE.md` and `docs/PLAN.md` be stored — **tracked in this repo** (default for private/personal repos), **excluded-only** via `.git/info/exclude` (files live in-place, no version history of the private files), or **symlinked to a private context repo** (files live elsewhere, symlinks in this repo point at them, giving version history via the context repo)? Use `AskUserQuestion` with those three options. If the user picks symlink mode, follow up with a text question for the private dir path (default: `~/claude-private/<basename of the target repo>`) and persist the chosen parent (`~/claude-private` in the default case) as a `user` memory (`default-private-context-repo`) so future bootstraps pre-fill it. Controls step 4's branching.
+- **Storage — always ask; never infer it from repo visibility.** How should `CLAUDE.md` and `docs/PLAN.md` be stored — **tracked in this repo**, **excluded-only** via `.git/info/exclude` (files live in-place, no version history of them), or **symlinked to a private context repo** (files live elsewhere, symlinks in this repo point at them, giving version history via that repo)? Writing private planning docs into a tree that may later be pushed leaks them, so there is no safe default to fall back on. Use `AskUserQuestion` with those three options. `git remote -v` (offline; no `gh` needed; no remote, or a not-yet-`git init`-ed repo, is fine) only informs which option you *recommend* — it never gates the question. For symlink mode, follow up with a text question for the private dir path (default `~/claude-private/<basename of the target repo>`). Controls step 4's branching.
+  - Before offering exclude or symlink mode, run `git ls-files -- CLAUDE.md docs/PLAN.md`. If either is already tracked, moving it out of the tree needs `git rm --cached`, which invariant 1 forbids you from running: give the user the exact command and treat the mode switch as pending their action. Never leave a file silently tracked under a mode that assumes it isn't.
 
 Use `AskUserQuestion` for multiple-choice clarifications; plain text questions otherwise.
 
@@ -89,9 +90,9 @@ After approval, write the artefacts into the target repo and stop. Do not commit
 
 Artefacts to write:
 
-1. `CLAUDE.md` and `docs/PLAN.md` (from the drafts) — where they land depends on the Step 2 privacy choice:
+1. `CLAUDE.md` and `docs/PLAN.md` (from the drafts) — where they land depends on the Step 2 storage choice. **If that question was never answered** (interview cut short, question skipped), stop and ask it now; never silently fall through to tracking in-repo. Then:
 
-   - **Track in this repo (default)** — write at the conventional repo-root paths.
+   - **Track in this repo** — write at the conventional repo-root paths.
    - **Exclude only** — append three lines to `.git/info/exclude` (creating it if absent):
      ```
      /CLAUDE.md
@@ -100,7 +101,7 @@ Artefacts to write:
      ```
      Then write the two files at the conventional paths. Note in the closing summary that `.git/info/exclude` is per-clone; if the user re-clones, they must recreate these entries before their first `git add`.
    - **Symlink to private context repo** — let `$PRIVATE` be the path the user gave:
-     1. If the target repo already has a non-empty `docs/`, abort cleanly: report the conflict and ask the user to move or rename its contents (or pick a different privacy mode) before re-running bootstrap. The directory symlink in step 4 would otherwise shadow existing content.
+     1. If the target repo already has a non-empty `docs/`, abort cleanly: report the conflict and ask the user to move or rename its contents (or pick a different storage mode) before re-running bootstrap. The directory symlink in step 4 would otherwise shadow existing content.
      2. Create `$PRIVATE/docs/` if it doesn't exist.
      3. Write `CLAUDE.md` to `$PRIVATE/CLAUDE.md` and the `docs/PLAN.md` draft to `$PRIVATE/docs/PLAN.md`.
      4. Create absolute symlinks in the target repo:
