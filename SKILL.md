@@ -16,13 +16,15 @@ The structural idea is **nested plans**. A coarse, stable plan lives in `docs/PL
 
 ## Invariants that apply to every entry point
 
-These three rules apply everywhere in this skill and override anything below that might read otherwise.
+These four rules apply everywhere in this skill and override anything below that might read otherwise.
 
 **1. The user owns version control.** Never run `git add`, `git commit`, `git push`, `git rm`, `git reset`, `git stash`, or any other git command that mutates history or the working tree, and never propose to. Summarise what changed in plain text and let the user commit. Read-only git commands (`git status`, `git diff`, `git log`) are fine to confirm state.
 
 **2. Stay inside the current repository.** Only edit files inside the repo the user is working in. Do not write to, delete from, or reorganise anything outside it — including the user's home dir, sibling repos, or this skill's own files — without an explicit instruction in the current session.
 
 **3. Context is a budget, not a free resource.** Prefer narrow reads (`offset`/`limit`, targeted `Grep`) over whole-file reads. For anything large or broad, delegate to `Agent(subagent_type="Explore")` with a specific question — the subagent's summary enters context, not the raw file. At WP close, check file sizes and invoke `archive-plan` if `CLAUDE.md > 500 lines` or `docs/PLAN.md > 800 lines`.
+
+**4. Only an `implement` session implements.** A work package's deliverables are produced, and its box checked `[x]`, only inside an `implement <WP-id>` session that has passed its own per-WP `ExitPlanMode` and run that WP's verification. `bootstrap` and `amend-plan` author plans, never code — every WP they write ships `[ ]`, however small it looks and even if this session believes it could satisfy it now. This rule lives here, not in the generated `CLAUDE.md`: the "one session per WP" line there cannot bind the bootstrap session that is only now writing it. It does not re-gate a session's own closing bookkeeping — `implement` Step 5 refining upcoming WPs and calling `archive-plan` in-line are that session's already-approved work, not a second entry point's.
 
 ## Picking the entry point
 
@@ -63,7 +65,7 @@ Use `AskUserQuestion` for multiple-choice clarifications; plain text questions o
 
 ### Step 3 — draft the artefacts
 
-Read [templates/CLAUDE.md.tmpl](templates/CLAUDE.md.tmpl) and [templates/PLAN.md.tmpl](templates/PLAN.md.tmpl) and fill them in. Put both drafts *into the plan file* so the user reviews them in one place. Do not write into the target repo yet.
+Read [templates/CLAUDE.md.tmpl](templates/CLAUDE.md.tmpl) and [templates/PLAN.md.tmpl](templates/PLAN.md.tmpl) and fill them in. Put both drafts *into the plan file* so the user reviews them in one place. Do not write into the target repo yet. The plan file holds only these two drafts plus the storage decision — no implementation steps, no code, no notebook cells, not even for a WP small enough to finish now. `ExitPlanMode` approves whatever the plan proposes, so a plan that proposes implementing a WP would carry that implementation straight past the per-WP gate (invariant 4).
 
 **CLAUDE.md must cover:**
 
@@ -86,7 +88,7 @@ Templates are scaffolds, not boilerplate to inject verbatim. Prefer a shorter, t
 
 ### Step 4 — `ExitPlanMode`
 
-After approval, write the artefacts into the target repo and stop. Do not commit.
+After approval, write the artefacts listed below into the target repo — **exactly these files, and nothing else** — then stop. A bootstrap session bootstraps: it does not implement any WP (no code, no deliverables), does not check any WP box, and does not commit. Every WP ships `[ ]`, and the `## Completed WPs` section of `docs/PLAN.md` is left empty. Close by telling the user that the next step is to start a fresh `implement WP1` session.
 
 Artefacts to write:
 
