@@ -20,9 +20,15 @@ These four rules apply everywhere in this skill and override anything below that
 
 **1. The user owns version control.** Never run `git add`, `git commit`, `git push`, `git rm`, `git reset`, `git stash`, or any other git command that mutates history or the working tree, and never propose to. Summarise what changed in plain text and let the user commit. Read-only git commands (`git status`, `git diff`, `git log`) are fine to confirm state.
 
-**2. Stay inside the current repository.** Only edit files inside the repo the user is working in. Do not write to, delete from, or reorganise anything outside it — including the user's home dir, sibling repos, or this skill's own files — without an explicit instruction in the current session.
+**2. Stay inside the current repository.** Only edit files inside the repo the user is working in. Do not write to, delete from, or reorganise anything outside it — including the user's home dir, sibling repos, or this skill's own files — without an explicit instruction in the current session. One standing exception: a session may keep its own bookkeeping (such as the coordination log's read offset, see [references/parallel-sessions.md](references/parallel-sessions.md)) in its own scratchpad directory. The coordination log itself lives *inside* the repo and needs no exception.
 
 **3. Context is a budget, not a free resource.** Prefer narrow reads (`offset`/`limit`, targeted `Grep`) over whole-file reads. For anything large or broad, delegate to `Agent(subagent_type="Explore")` with a specific question — the subagent's summary enters context, not the raw file. At WP close, check file sizes and invoke `archive-plan` if `CLAUDE.md > 500 lines` or `docs/PLAN.md > 800 lines`.
+
+**Reach for the cheapest instrument that resolves the question, and refine only if it does not.** It cuts three ways, and the founding episode committed all three in one chain:
+
+- **Do not ask a peer what you can check yourself.** One session asked another "did your WP touch a pinned constant?" when `git status` crossed with its own record of what it had edited answered it locally in seconds. That was the first link, and without it neither of the others happens.
+- **Do not convene a fleet for what one command answers.** The asked session routed that question through five agents, when `git show --stat HEAD -- 'numerics/test_*.py'` settles it in two seconds. Delegation is for breadth, not for thoroughness theatre.
+- **Do not hedge where you could have a fact.** Rather than wait, the asking session told the user "I don't think it did" — a guess offered where two seconds of checking was available.
 
 **4. Only an `implement` session implements.** A work package's deliverables are produced, and its box checked `[x]`, only inside an `implement <WP-id>` session that has passed its own per-WP `ExitPlanMode` and run that WP's verification. `bootstrap` and `amend-plan` author plans, never code — every WP they write ships `[ ]`, however small it looks and even if this session believes it could satisfy it now. This rule lives here, not in the generated `CLAUDE.md`: the "one session per WP" line there cannot bind the bootstrap session that is only now writing it. It does not re-gate a session's own closing bookkeeping — `implement` Step 5 refining upcoming WPs and calling `archive-plan` in-line are that session's already-approved work, not a second entry point's.
 
@@ -37,6 +43,27 @@ Use `args` to choose:
 - `retrospect` — harvest lessons from a project that has used this skill and fold them back into `SKILL.md` or the templates.
 
 If the user's phrasing matches one of these but they didn't name the skill, invoke anyway — getting into plan mode before code *or plan* changes is what the skill buys.
+
+## Before any entry point: the coordination log
+
+The user may be running several sessions on one repo at once, each on a different WP, with no channel
+between them. Coordination is an append-only log at **`docs/coordination/`**, inheriting whatever
+storage mode `docs/` already has. Create it if absent and another session may be running.
+
+Three rules, and they are all a session needs unless two are implementing at once:
+
+1. **Read it whenever control returns from you to the user** — a prompt, an `AskUserQuestion` answer,
+   an `ExitPlanMode` approval *or rejection*. Those are the only moments you can have sat idle, so they
+   are the only moments the world can have moved without you noticing.
+2. **You cannot know you are alone without looking**, so that read comes before any conclusion about
+   who else is running.
+3. **Announce before writing anything a peer might also be editing**, and check the log's claim lines
+   first. Claims are advisory, not locks.
+
+Everything else — the message vocabulary, the watch that turns the log into a push channel, commit
+choreography, and a list of designs that were tried and discarded — is in
+[references/parallel-sessions.md](references/parallel-sessions.md). Read it when more than one session
+is actually running; skip it otherwise.
 
 ---
 
@@ -119,6 +146,8 @@ Artefacts to write:
 
    If the target repo has not been `git init`-ed yet, the exclude-only and symlink branches must abort cleanly: report which `.git/info/exclude` paths and (for the symlink branch) which symlinks would have been created, write the markdown files only after the user confirms in a follow-up, and tell them to add the exclude entries before their first `git add`.
 
+   Under **track in this repo**, also add `/docs/coordination/` to `.gitignore`. The coordination log inherits `docs/`'s location but must stay out of a shared history: a log that is committed is no longer disposable, and the obligation to move durable conclusions out of it quietly lapses. Under **exclude only** it is already covered by the `/docs/PLAN.md` sibling entries — add `/docs/coordination/` there too. Under **symlink**, nothing to do: versioning it in the private repo is the point of that mode.
+
 2. A starter `.gitignore` at the repo root, **only if the project uses Python and/or LaTeX** and the repo does not already have a `.gitignore`. Source the content from:
    - [templates/gitignore/python.gitignore](templates/gitignore/python.gitignore)
    - [templates/gitignore/latex.gitignore](templates/gitignore/latex.gitignore)
@@ -165,6 +194,13 @@ Use `AskUserQuestion` for real ambiguities. Don't pad with clarifying questions 
 
 After approval, execute the plan. Keep all edits inside the current repo.
 
+**Numbers measured while planning have a shelf life.** Approval can arrive minutes or days after the
+plan was written, and another session may have committed in between. Any figure the plan quotes from
+the repo — a count, a rank, a reach, a test constant — is an *input with an expiry*, not a fact.
+Re-measure anything you are about to act on or write into a document. One plan carried a headline that
+had moved from 16 to 0 by the time it ran, and it was caught only because that plan happened to say
+"re-measure in Phase 2" rather than carrying the number forward.
+
 ### Step 5 — close the WP (no commit)
 
 As the final step of the session, before handing back for the user to commit:
@@ -172,6 +208,7 @@ As the final step of the session, before handing back for the user to commit:
 1. Update `CLAUDE.md`: mark the WP `[x]` with a one-line summary and links to the closing code/tests. Add any new modules, data files, or conventions the WP introduced. **Keep completed-WP entries to one line each** — the git history and the closing diff are the record of how the WP was done; `CLAUDE.md` is a living guide, not a changelog.
 2. Update `docs/PLAN.md`: refine upcoming WPs if what you learned changes them. Don't retell the WP — the diff is the record.
 3. **Check the size of both files.** Run `wc -l CLAUDE.md docs/PLAN.md`. If either exceeds the archive threshold (see below), run the `archive-plan` entry point in-line before handing off. Do this as the final sub-step so the user reviews one coherent diff: WP changes + archive, in that order.
+4. **Move any durable conclusion out of the coordination log**, into `CLAUDE.md`, `docs/PLAN.md` or a design document, and leave a pointer behind. Then release every claim the session still holds. The log is disposable by design, so anything left in it is lost — and a finding that only exists there is unrecoverable from the conclusions that cite it, because who established what, and against which evidence, is not reconstructable after the fact.
 
 Then summarise in chat what changed and what the user should check before committing. Do not run any git mutation.
 
@@ -200,6 +237,8 @@ Never renumber existing WPs: their ids are referenced from `CLAUDE.md`, from mem
 
 Pick the lowest free number in the relevant form. Because ASCII `.` < `/` < digits, a plain byte sort already lists ids in reading order (`WP3, WP3.2, WP3/1, WP4`) with no special-casing.
 
+"Lowest free" is computed from the same file two sessions are both reading, so two of them amending at once pick the *same* id. When another session may be running, claim the number in the coordination log before writing the entry.
+
 ### Not gated
 
 Marking a WP `[x]` and refining upcoming WPs as `implement` Step 5, and the rewrites `archive-plan` performs, both run under that session's existing approval — do not re-gate them. Reporting status or answering "what's next" is read-only and needs nothing.
@@ -217,9 +256,11 @@ The two files serve different roles and compress differently:
 
 Never delete; always back up first.
 
-### Step 1 — require a clean tree
+### Step 1 — require the archived files to be clean
 
-Check `git status`. Refuse to proceed on a dirty working tree: the archive operation must land as one reviewable diff (or be stacked on top of the same WP's changes, when invoked from `implement` Step 5). Ask the user to commit or stash first. Do not stash for them.
+Check `git status`. The two files being archived must have no uncommitted changes, so the archive lands as one reviewable diff (or is stacked on top of the same WP's changes, when invoked from `implement` Step 5). If they are dirty, ask the user to commit or stash first. Do not stash for them.
+
+Unrelated dirt does **not** block. Requiring the whole tree to be clean is never satisfiable when another session is mid-WP, which would make this entry point unreachable exactly when the plan file has grown enough to need it. If another session holds a claim on either file, defer rather than refuse: say so and let the user sequence it.
 
 ### Step 2 — copy both files verbatim to dated backups
 
@@ -269,7 +310,7 @@ Read, in this order:
 1. The current repo's `CLAUDE.md` — look at the standing-conventions list and the resource map. Conventions added mid-project are often the best candidates for promoting into the generic template.
 2. The closed WPs in `CLAUDE.md` — the one-line summaries often reveal patterns (e.g. "every WP needed a cross-check oracle" suggests adding a convention slot for that).
 3. Recent per-WP plan files under `~/.claude/plans/` for this repo — read the ones from the last few WPs, not everything. Look for steps that felt like they should've been automated, moments where the user corrected the approach, or verification recipes that recurred.
-4. Feedback memories under the current session's memory dir (`feedback_*.md`) — if any rule there is generic enough to apply to every wp-workflow user, it belongs in the skill.
+4. Memories under the current session's memory dir. They are named by topic slug, not by type, so there is no `feedback_*.md` to glob — read `MEMORY.md` for the index, then open the files whose frontmatter `type` is `feedback` or `project`. If any rule there is generic enough to apply to every wp-workflow user, it belongs in the skill.
 
 ### Step 3 — propose edits
 
@@ -281,9 +322,19 @@ Into the plan file, write a short list of proposed changes. For each:
 
 Bias toward **fewer, load-bearing additions** over a long list. A skill that accumulates every lesson becomes unreadable fast. If a candidate lesson is borderline, leave it out — the user can always invoke `retrospect` again later when the pattern has recurred in a second project.
 
+**The skill has a size budget too, it is documented rather than invented, and it is checked on both of the paths that grow it** — here, and in *Improving this skill outside `retrospect`* below.
+
+Anthropic's Agent Skills guidance budgets by **tokens and load frequency**, not by lines: the `description` is always in context (~100 tokens), `SKILL.md` loads in full on **every invocation** and should stay **under 5k tokens**, and files under `references/` load only when read and have *no practical limit*. Check with `wc -c` and divide by four for a rough token count; a line count is a bad proxy, because dense prose at ~90 characters per line costs more than twice as much per line as prose at ~40.
+
+Two consequences that are easy to get backwards. **`SKILL.md` is the file to protect**, since every entry point's text is loaded even when a session uses only one of them — a `bootstrap` section costs every `implement` session that never runs it. And **`references/` is the destination, not a thing to cap**: capping it defeats the progressive disclosure the architecture is built on. So when `SKILL.md` is over budget, move material *out* rather than compress it.
+
+Report where the mass sits, not just the total: `awk '/^## /{...}'` over the headings shows which section to move first. A skill that tells every project to watch its file sizes while exempting its own would be holding a standard it does not apply.
+
 ### Step 4 — `ExitPlanMode` and apply
 
 After the user approves, edit `SKILL.md` and/or the templates under `~/.claude/skills/wp-workflow/`. This is the one place in this skill where editing outside the current repo is expected — the user's invocation of `retrospect` is the explicit per-session instruction that authorises it.
+
+Nothing mediates these edits: the files are outside every repo, so no coordination log covers them and two sessions editing the skill would collide silently. Claim `SKILL.md` in the coordination log before editing and release it after. That is a convention rather than a mechanism, and it is the weakest guard in this skill; say so if it matters. The same applies to the other path that edits these files, *Improving this skill outside `retrospect`* below — which is the more travelled one, so the guard matters there at least as much.
 
 Summarise what changed, and suggest the user version-control their `~/.claude/skills/wp-workflow/` directory if they aren't already.
 
@@ -293,7 +344,14 @@ Summarise what changed, and suggest the user version-control their `~/.claude/sk
 
 When the user says something like *"update wp-workflow so that X"* or *"add X to the skill based on what we just learned"*, treat it the same way as `retrospect`: enter plan mode, propose the specific edit with a one-line rationale, get approval, then apply it to `~/.claude/skills/wp-workflow/`.
 
-Two defaults that matter:
+**"The same way" includes two things from `retrospect` that are spelled out here rather than left to inherit**, because a rule whose applicability depends on how a reader interprets "the same way" is the same defect class as a predicate with no stated test: it looks like a mechanism and is a wish.
+
+- **Claim `SKILL.md` in the coordination log before editing, and release it after.** These files sit outside every repo, so nothing else mediates two sessions editing them at once.
+- **The size check**: `SKILL.md` under 5k tokens (`wc -c`, divide by four), `references/` unbounded, and report where the mass sits. Move material out rather than compress it.
+
+Both matter at least as much here as in `retrospect`, since most skill edits arrive mid-session as *"update wp-workflow so that X"* rather than as a formal `retrospect` — an observation from one session's history, not a measured distribution.
+
+Two further defaults that matter:
 
 - **Process lessons go into `SKILL.md`**; **structural lessons go into a template file**. A lesson about how a session should flow (e.g. "always check for an existing similar function before proposing a new module") edits `SKILL.md`. A lesson about what every project's scaffold should contain (e.g. "add a *Testing conventions* section") edits a template.
 - **Prefer one load-bearing sentence over accumulation.** If a new rule duplicates or softens an existing one, rewrite the existing one instead of adding alongside. The templates in particular get used by every future bootstrap — keeping them lean keeps generated `CLAUDE.md` files readable.
