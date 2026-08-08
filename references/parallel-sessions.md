@@ -288,6 +288,42 @@ In the founding exchange every deep error was caught by the user and none by eit
 the very finding it had just made and neither session noticed, though one of them was holding both
 halves. To check a frame you need a reader that was not told the frame.
 
+**A check's characteristic failure is to confirm the hypothesis it was testing.** A broken check
+reports the defect it was looking for, and that reads as a finding rather than as a fault. Verifying
+one refactor here, an off-by-one in the extraction reported 15.5 kB of content lost, and a pattern
+that failed to match reported all five files as differing; both were the instrument, and either
+published would have been a serious false accusation against a correct change. What caught it was not
+inspecting the check but noticing its output **contradicted an independent measurement**: bodies down
+15.5 kB cannot coexist with a total up 1.7 kB. So **suspect a failing check before its subject, and
+confirm against a quantity measured a different way.** Note the direction: the two rules below are
+about *false negatives*, something present reported missing; this is the mirror, a *false positive*
+for a defect, manufactured by the instrument.
+
+**When a claim pairs a measured quantity with a declared threshold, the measurement attracts the
+checking and the threshold rides in free.** Both sessions here declined to ship a finding because a
+file was "at 295 of its 300-line limit". The 295 was genuinely measured with `wc -l` and reported as
+verified; the 300 had been deleted from the rule some hours earlier and nobody looked. The measurement
+is checkable, so checking it feels like diligence and yields a real number, while the threshold is the
+half that actually decides — and the failure modes are not comparable: a bad measurement is wrong by
+units, a threshold that does not exist is wrong by everything. Check the *deciding* half, which is
+usually the one presented as settled.
+
+Note what this adds to the measured-versus-declared discipline rather than restating it: labelling a
+number "declared" marks it as a choice, and therefore as something not to re-derive, which is precisely
+the property that let a deleted threshold survive. **The label predicts where verification will not
+go.** Both instances of this, and the sign-off filter that quietly gated on demonstrability, shared one
+disguise worth naming: **the failure arrived dressed as discipline.** Restraint, a budget, a criterion
+— each looked like rigour and each was the error.
+
+**And a stopping condition for "cheapest sufficient", which that rule otherwise lacks.** Each failure
+of a cheap instrument looks like a small fix, so sessions keep patching it. The signal is not the
+number of failures, which would be another declared threshold: it is whether **consecutive failures
+have unrelated causes.** One bug twice means fix the bug. Two *different* bugs mean the instrument is a
+poor fit for the question rather than buggy, and it is time to switch, which is available at the second
+failure without counting to anything. In the case above the two faults were an `awk` boundary error and
+a pattern-anchor mismatch, unrelated, and the question in fact wanted a language with real string
+handling rather than nested shell quoting.
+
 One practical corollary, since checking an artefact is what this whole document rests on: **grep for
 the concept, not for a contiguous phrase.** A claim you are verifying may be present but wrapped across
 a line break, so an exact-phrase search returns nothing and you conclude a fix is missing that is
