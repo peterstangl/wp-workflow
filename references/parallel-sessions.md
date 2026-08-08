@@ -14,9 +14,20 @@ nothing about them.
 
 `docs/coordination/`, inheriting whatever storage mode `docs/` already has. That gets it right in all
 three modes the skill supports, with no new question: tracked, excluded via `.git/info/exclude`, or
-symlinked to a private context repo. When `docs/` is tracked in the project repo, exclude the
-subfolder — a log inside a shared history is not disposable, and the duty to move conclusions out of it
-quietly lapses.
+symlinked to a private context repo.
+
+**Whether to track it is a project decision, not a rule.** Tracking gives a durable, greppable record
+of what happened when, and — more valuable than it sounds — it preserves the *reasoning* behind
+conclusions, which the conclusions themselves do not carry: who established what, against which
+evidence, and what was tried and discarded. Excluding it keeps process traffic out of a repository's
+history, which some projects care about a great deal.
+
+What does **not** turn on the choice is the obligation to move durable conclusions into `CLAUDE.md`,
+`docs/PLAN.md` or a design document. That obligation belongs to the close-out checklist in
+[implement.md](implement.md), and a checklist item fires whether or not the log survives. An earlier
+version of this file argued the opposite, that the log had to be excluded so its mortality would force
+conclusions out; that reasoning was wrong, because a rule enforced by deletion is a rule enforced by
+remembering, and the checklist was already the mechanism.
 
 It has to be retrofittable, since most projects were bootstrapped long before any of this existed.
 Every project the skill has touched already has `docs/`, so this is one `mkdir` by whichever session
@@ -76,6 +87,45 @@ Order the log by **append position**, never by the timestamps in the headers. Ap
 arbitrates two sessions racing for the same claim, which is the one property that makes a single shared
 file better than a file per session.
 
+### Naming yourself, and the block header
+
+Every block opens with one header line:
+
+```
+## <YYYY-MM-DD HH:MM>  <identity>  <TYPE>  <one-line subject>
+```
+
+**Your identity is your task, not an ordinal.** A session running this skill has exactly one job for
+its whole life, the entry point and its argument, so that is already a name: `WP3`, `WP13.3`,
+`bootstrap`, `retrospect`. Do not allocate yourself a `session-A` or a `session 2`.
+
+The first reason is the one that matters. **An ordinal has to be allocated, and allocating anything
+between sessions that cannot see each other is the problem the log exists to solve.** Two sessions
+arriving at once both read the log, both see no `session-A`, and both take it — the same race as
+picking "the lowest free WP number", which this skill already handles by requiring a claim. A
+task-derived name needs no allocation, because the user made the names distinct when they gave each
+session a different task. The second reason is that it carries information:
+`CLAIM: numerics/data | WP13.3` tells a reader whose work is at stake, where `session-B` tells them
+nothing and has to be looked up. If two sessions genuinely share one task, disambiguate on whatever
+differs between them rather than by counting.
+
+**Name the peer you are answering, in the subject, and never rely on second person.** A log is a
+broadcast with no addressee, but a watch notification *arrives* like a message to you, and that
+asymmetry misleads: a session that has recently posted will read the next block's "your" and "yours"
+as its own. It happened here. A block written by one session to another, twenty-three minutes and six
+hundred lines after a third session's unrelated post, was read by that third session as a reply to
+itself, which produced a confident correction of an attribution that had been right all along. Write
+"WP3's offset bug", not "your offset bug".
+
+The corollary is a reading rule: **a block's "you" is resolved by the block above it, not by who
+received the notification.** Before answering anything, look at what precedes it. This is also why an
+event stream is not a conversation, however much it feels like one.
+
+**Put the message type in the header, in capitals** — `ARRIVED`, `INVALIDATES`, `CLAIM`, `RELEASE`,
+`FINDING`, `CORRECTION`, `NOTE`, `DONE`. A watch emits header lines and nothing else, so the type is
+what tells a reader whether an event needs acting on now or reading later. A header without one costs
+a file read to find out.
+
 ### Reading it
 
 Two different reads, for two different needs:
@@ -88,6 +138,29 @@ Two different reads, for two different needs:
 
 Incremental reading is only sound *because* the log is append-only. That is the real reason for the
 never-truncate rule.
+
+**Only reading advances the offset. Writing never does.** After appending your own block the file is
+longer, and setting the offset to the new end marks as read everything a peer appended since you last
+looked. The same failure has a second form: reading from a *pattern match* rather than from the stored
+offset, then declaring the file read, which silently swallows the whole prefix between the offset and
+the match. Both are silent, and both were committed in practice, in two projects, on the same day.
+
+**Arming a watch is not reading.** A watch started at the current end of file has just set an offset
+to a position nobody read, and it will report only what arrives afterwards. Every block already in the
+file is then invisible to that session forever, silently, and this is the form the author of this
+paragraph committed: a watch armed at line 1614 declared 1613 lines read, including the block that
+prompted the finding being written up. Arm it at your **stored** offset, not at the end; if you have
+no stored offset, enumerate first and set it deliberately.
+
+**When you doubt the offset, do not repair it. Enumerate the headers.** `grep -nE '^## '` over the
+whole file lists every block, is complete *regardless* of what the offset claims, costs one command
+whatever the log's size, and does not depend on the mechanism that just failed. Then account for the
+blocks you have actually seen. This is the same argument the lock set rests on, bounded output over the
+whole file, and it applies to headers for the same reason — which is why the header format is worth
+keeping strict enough to grep.
+
+The distinction is worth stating plainly: an offset is a claim about your own past attention, and a
+header count is a fact about the file. When they disagree, the file wins.
 
 ### A watch, so the log pushes
 
@@ -165,6 +238,21 @@ pgrep -fa 'zzz-no-such-watcher-zzz' | grep -vc pgrep   # -> 0   the working form
 The naive predicate returns 1 for a pattern that matches **nothing**, so it is provably incapable of
 reporting "not running" — shown in one command, at the moment the check is written, with no reasoning
 required.
+
+**Narrow a convenience, never a guarantee.** A watch that emits every peer header costs its user a read
+per event to conclude the event was not theirs, so narrowing it is right. What makes narrowing *safe* is
+that read-on-return is untouched underneath: the filter drops timeliness, not delivery. Test the new
+filter on a fixture in both directions before arming it — the lines that must pass and the lines that
+must drop — and confirm the old watch is gone and the new one running, or you have two.
+
+**A filter is a reachability contract, so publish what it drops, not only what it passes.** An unstated
+filter is indistinguishable from a peer who has gone quiet, and quiet is indistinguishable from absent,
+which is the failure this whole file circles. Say it in the log: *to reach me, name my identity in your
+header, claim one of these paths, or use `INVALIDATES`; anything else I will see late.* Keep
+`INVALIDATES` and any log-integrity `ALERT` passing unconditionally from anyone, since those are
+precisely the messages a narrowed filter would otherwise lose. The author of this paragraph narrowed a
+watch to suppress its own posts and never published that, so a peer wondering why a message had not
+landed had no way to find out.
 
 That also puts the watch in its proper place. **Read-on-return is mandatory; the watch is
 best-effort.** A dead watch then costs only mid-turn timeliness, never correctness, because the next
@@ -309,6 +397,19 @@ In the founding exchange every deep error was caught by the user and none by eit
 **five consecutive times**, including the last one, where a session's own sign-off criterion excluded
 the very finding it had just made and neither session noticed, though one of them was holding both
 halves. To check a frame you need a reader that was not told the frame.
+
+**Never author a claim in the same tool call that produces its evidence.** Measure, read the result,
+then write. When a command and the sentence reporting it go in one call, the sentence was composed
+before the output existed, so it is written from *expectation* and nothing forces a reconciliation
+afterwards. This is structural rather than a lapse of attention, which is why "read your own output"
+is not a usable rule and this is: splitting the two makes writing-from-expectation hard instead of
+merely discouraged, and it costs one extra tool call.
+
+It explains a pattern otherwise hard to account for. One session's shipped *guards* were all sound
+while several of its *reports* were false, and the difference was that every guard had been forced
+into a separate step and read before it was believed, while every false report had been co-authored
+with its own evidence. Another published a byte count of `1722` where the file said `1721`, having
+composed the sentence from a measurement taken before an edit it then made in the same breath.
 
 **A check's characteristic failure is to confirm the hypothesis it was testing.** A broken check
 reports the defect it was looking for, and that reads as a finding rather than as a fault. Verifying
