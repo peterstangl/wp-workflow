@@ -168,7 +168,25 @@ session a different task. The second reason is that it carries information:
 nothing and has to be looked up. If two sessions genuinely share one task, disambiguate on whatever
 differs between them rather than by counting.
 
-**Address every block explicitly, and write `ALL` rather than leaving it blank.** Without an addressee
+**Address each block to whoever must act on it, and reserve `ALL` for what changes what an uninvolved
+session does** — a format change, a log-integrity alert, an arrival or departure, a claim. Findings between
+two sessions are addressed to those two.
+
+**The field collapses without that sentence, and it collapsed within ninety minutes of being introduced.**
+Measured on the log it was introduced in: **57 of 57 blocks named `ALL`**, from every session including the
+one that wrote the rule, and not one was addressed to named sessions alone. A filter keyed on `ALL` then
+passes everything, which is the state before the field existed, and the promise that a reader can see
+`-> WP4` and stop describes something that never once happened.
+
+The cause is an incentive, not a wording. Omitting `ALL` risks a peer missing something; including it costs
+peers a read. **The cost of over-addressing falls on others and the cost of under-addressing falls on
+you**, so everyone maximises. The counterweight is already here and must be stated beside the rule or it
+will not be applied: **because a pass rule fails open, under-addressing costs a late read, not a lost
+message.** A session that should have been named still sees the block, through its own filter's fail-open
+branch or through `INVALIDATES`, `ALERT` and `DONE` passing unconditionally. Address narrowly; the
+machinery is built so that being wrong about it is cheap.
+
+**Do address every block to somebody, and write `ALL` rather than leaving the field blank.** Without an addressee
 a log is a broadcast, but a watch notification *arrives* like a message to you, and that asymmetry
 misleads: a session that has recently posted reads the next block's "your" as its own. It happened
 here. A block from one session to another, twenty-three minutes and six hundred lines after a third
@@ -404,6 +422,28 @@ pgrep -fc 'zzz-no-such-watcher-zzz'                    # -> 1   the naive form
 pgrep -fa 'zzz-no-such-watcher-zzz' | grep -vc pgrep   # -> 0   the working form
 ```
 
+**Better than either form: have the watch touch a heartbeat file each poll, and read its mtime.** A
+process table tells you whether *a process matching a pattern* exists, which is not the question; it also
+over-counts, because the shells that launched and check the watch carry the pattern in their own command
+lines. Measured: three matches for a single watch, and the checking shell was not among them. A heartbeat
+answers the actual question, and it is the difference between inferring liveness and measuring it.
+
+Write it under `docs/coordination/heartbeat/<your identity>`, touched on every poll of the loop you have
+already got. Then a peer's test is `mtime` against a small multiple of the poll interval, which is
+**measured rather than declared**: the interval is a number you chose and can read, not a staleness
+threshold invented to look principled.
+
+**It fails open, and this is the half that makes it safe.** No heartbeat means *unknown*, never *dead*: a
+session may simply not be running a watch, which was true of two sessions out of five on the day this was
+written. So a missing file licenses nothing. What a *stale* heartbeat licenses is the reversibility
+judgement below, with better information than a guess.
+
+It also composes with `sign-off` without a special case. A session that signs off stops its watch, so its
+heartbeat goes stale by construction, and the stale heartbeat and the `DONE` block agree. A session whose
+window was closed leaves the stale heartbeat and no block, and **that difference is exactly what
+distinguishes a departure from a disappearance** — which is the thing no amount of reading the log could
+otherwise settle.
+
 **The thing to regress is whatever you just added.** The rule reaches further than predicates: a
 *fixture* is not coverage until something fails when the fixture goes unseen. One session found a blind
 spot in its own checker, added a specimen from the blind class, and stopped — and measured that with the
@@ -457,6 +497,30 @@ checkpoint indefinitely.
 
 **Events** — no revocation: a checkpoint reached, a commit landed, a correction, a finding.
 
+**`ARRIVED` is a trigger, not only an announcement: when one appears, every live session welcomes the
+newcomer and says what it inherits.** This is the one duty in this file with a genuine external trigger,
+which is why it is worth having as an obligation rather than as advice. A block appears in the log, your
+watch surfaces it, and the response is owed. Nothing has to be remembered.
+
+Say what the newcomer would otherwise reconstruct or trip over. In practice that is three things: what it
+can rely on without re-checking, because you already verified it; what of yours it is about to stand on,
+especially in paths it just claimed; and any trap in a file it claimed that the file does not advertise.
+One session warned an arriving session that a file it had claimed one minute earlier carried scaffolding a
+later work package deletes, which is exactly the class: not a durable conclusion, not a diff-review aid,
+just a thing one live session knew and the next would have hit.
+
+**If you have nothing, say so in one line.** That is not a courtesy, it is information: the newcomer can
+read the population off the log, so a short "nothing from me" distinguishes *we do not interact* from
+*that session has not seen you yet*, and silence cannot.
+
+**Do not put this in a session's departure instead.** It is tempting, because a departing session
+obviously has knowledge to pass on, and it is wrong in both directions: a session signing off before any
+successor exists has nobody to write to, and a session arriving when nobody happens to be leaving gets
+nothing, which is the common case and the one where context is most needed. Measured on the arrival that
+produced this rule: four handover blocks inside two minutes, and **two came from sessions that were not
+going anywhere**. The two that sat inside sign-offs did so by coincidence of timing, and reading that as a
+departure duty inverts the trigger.
+
 Most revocations should be *derived* rather than remembered: departing revokes everything that session
 held. Rules that depend on remembering get broken, usually within minutes of being written down.
 
@@ -490,8 +554,10 @@ sessions built locks instead. Name it, then build for it.
 
 A claim says someone intends to edit something. It does not stop you.
 
-**There is no reliable way to tell whether a session is still alive.** Directory mtimes are not a
-liveness signal — a live session's own directory can read days stale, because a directory's mtime
+**Without a heartbeat there is no reliable way to tell whether a session is still alive**, and with one
+there is, for any session running a watch: see the heartbeat rule above. What follows applies to a session
+that has none, and to the interval before a stale heartbeat is old enough to act on. Directory mtimes are
+not a liveness signal — a live session's own directory can read days stale, because a directory's mtime
 tracks entries added or removed in it, not writes inside its subdirectories. So do not invent a
 staleness threshold; a declared cut wearing a measured cut's clothes is worse than none.
 
@@ -597,6 +663,21 @@ while several of its *reports* were false, and the difference was that every gua
 into a separate step and read before it was believed, while every false report had been co-authored
 with its own evidence. Another published a byte count of `1722` where the file said `1721`, having
 composed the sentence from a measurement taken before an edit it then made in the same breath.
+
+**A count is not a measurement until what was counted is named.** Report the pattern beside the number,
+because the number is produced by the pattern and the pattern is the part that can be wrong. `6 matches`
+is not evidence; `6 files containing all three values` is. The failure never looks like a failure: every
+one of these was a real count of the wrong thing, reported with confidence.
+
+Promoted from a candidate on six instances across four sessions and five mechanisms: a regex matching a
+prefix shared with a different quantity; a header count taken against a different total; a total that moved
+because newly added fixtures cited real keys; an unanchored pattern counting a document's prose *about* a
+search recipe as if it were data; the same mechanism again on a different pattern; and, most general of
+all, **a real count of a real thing reported as a property of the object rather than of the instrument** —
+a claim replay keyed on path alone and one keyed on owner-and-path return different holders, both
+defensible, so there is no fact of the matter about "who holds the file" that is independent of the parser.
+Nothing was miscounted in that last one. The error was the omitted clause naming which instrument produced
+it.
 
 **A check must refuse, not report clean, when its input is empty.** A verification that finds nothing
 must distinguish *the specimen is clean* from *there was no specimen*, and treat the second as fatal

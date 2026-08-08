@@ -36,6 +36,23 @@ the very session that had identified the class**, undetected, and reported clean
 session's own status updates before a *different* session found it. A class its own discoverer is
 simultaneously committing is general, not local.
 
+## A closing block should carry the lesson that would change another session's practice
+
+**Would read:** a session ending should name what it got wrong in a way another session can act on, not
+only what it did. The value is in the *mechanism* it misdiagnosed, since that is the half that travels;
+what it built is already in the repository.
+
+**Evidence, one instance.** One sign-off carried a section titled "one thing I got wrong that is worth
+carrying, since it cost four sessions time": it had found a real symptom, attached the first cause that
+fit, and broadcast the mechanism, which three sessions then failed to reproduce. It also recorded that it
+repeated the same error twice more within the hour, once *after* writing that very paragraph.
+
+**Why it is not yet a rule.** One instance. A second closing block the same day carried a generalised note
+for later readers, which is a different thing, and a third carried none. Held here rather than added to
+[sign-off.md](sign-off.md) because a required confession invites performance, and because the promotion
+criterion this file sets exists precisely to stop a single vivid instance becoming procedure. Promote it
+if a second session, unprompted, ends with a misdiagnosed mechanism rather than a summary.
+
 ## `$?` after a pipe reports the wrong command
 
 **Would read:** in a pipeline, `$?` is the exit status of the *last* command, so a guard reading it
@@ -52,7 +69,12 @@ the reading of its status.
 this may be a worked example of that rather than a rule of its own. That is the judgement to make on
 promotion.
 
-## A count is not a measurement until what was counted is named
+## ~~A count is not a measurement until what was counted is named~~ — PROMOTED
+
+Moved into [parallel-sessions.md](parallel-sessions.md) on 2026-08-08, on the judgement recorded below.
+The evidence is kept here because the promotion turned on *mechanism* diversity rather than on session
+independence, which is a reading of the criterion the next promotion should either follow or overturn
+deliberately.
 
 **Would read:** report *what* was counted alongside the number, because a count is produced by a
 pattern and the pattern is the part that can be wrong. `6 matches` is not evidence; `6 files containing
