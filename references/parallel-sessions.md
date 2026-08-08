@@ -431,7 +431,9 @@ mechanism, calling it best-effort, and thinning it. An assumed guarantee is not 
 the *stated premise* of a rule going unchecked rather than a number going unchecked. Second, **publish
 what the filter drops, not only what it passes**: an unstated filter is indistinguishable from a peer
 who has gone quiet, and quiet is indistinguishable from absent. Keep `INVALIDATES` and any
-log-integrity `ALERT` passing unconditionally from anyone. Test the filter on a fixture in both
+log-integrity `ALERT` passing unconditionally from anyone, and `DONE` with them: a departure is precisely
+the message whose loss leaves you unable to tell a finished peer from a silent one, and one close-out has
+already been lost that way. Test the filter on a fixture in both
 directions before arming, and confirm the old watch is gone and the new one up, or you have two.
 
 Publishing it means saying so in the log, concretely: *to reach me, address a block to me or to `ALL`,

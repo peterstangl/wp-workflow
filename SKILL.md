@@ -1,6 +1,6 @@
 ---
 name: wp-workflow
-description: Bootstrap and run a work-package-based project workflow. Use when the user wants to set up a new repo with a CLAUDE.md + docs/PLAN.md structure, work on a specific WP ("implement WP3", "work on WP2", "continue with WP5", "start WP7"), add or re-scope a WP in the plan, or compress a long docs/PLAN.md once many WPs are complete. Trigger whenever the user mentions work packages, WPs, or asks to bootstrap / implement / amend / archive project plans in this style, even if they don't name the skill. The value of invoking is getting the session into plan mode *before* any code or plan changes, which is the central guardrail of the workflow.
+description: Bootstrap and run a work-package-based project workflow. Use when the user wants to set up a new repo with a CLAUDE.md + docs/PLAN.md structure, work on a specific WP ("implement WP3", "work on WP2", "continue with WP5", "start WP7"), add or re-scope a WP in the plan, or compress a long docs/PLAN.md once many WPs are complete. Trigger whenever the user mentions work packages, WPs, or asks to bootstrap / implement / amend / archive project plans in this style, even if they don't name the skill. Also invoke with `sign-off`, but only when the user says the literal words "sign off" or "sign-off": that entry point verifies the session is really finished and refuses if it is not, so status questions like "are you done" must NOT be routed to it. The value of invoking is getting the session into plan mode *before* any code or plan changes, which is the central guardrail of the workflow.
 ---
 
 # wp-workflow
@@ -42,6 +42,7 @@ Use `args` to choose:
 - `amend-plan` — add, re-scope, re-order, or drop a WP in `docs/PLAN.md`, outside an implement session.
 - `archive-plan` — compress a long `docs/PLAN.md`.
 - `retrospect` — harvest lessons from a project that has used this skill and fold them back into `SKILL.md` or the templates.
+- `sign-off` — end the session deliberately. **Triggered only by the literal phrase "sign off" or "sign-off"**, never by a question such as "are you done" and never by your own judgement that the work looks finished.
 
 If the user's phrasing matches one of these but they didn't name the skill, invoke anyway — getting into plan mode before code *or plan* changes is what the skill buys.
 
@@ -54,6 +55,7 @@ If the user's phrasing matches one of these but they didn't name the skill, invo
 | `amend-plan` | yes | [references/parallel-sessions.md](references/parallel-sessions.md) | [references/amend-plan.md](references/amend-plan.md) |
 | `archive-plan` | no | [references/parallel-sessions.md](references/parallel-sessions.md) | [references/archive-plan.md](references/archive-plan.md) |
 | `retrospect` | yes | [references/parallel-sessions.md](references/parallel-sessions.md) | [references/retrospect.md](references/retrospect.md) |
+| `sign-off` | no | already read; this is a departure, not an arrival | [references/sign-off.md](references/sign-off.md) |
 
 The third column repeats deliberately. A session that read only its own row still sees it, and the table is
 the part of this file that is demonstrably acted on: asked afterwards, a session that had missed the
