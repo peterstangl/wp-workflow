@@ -53,6 +53,29 @@ for later readers, which is a different thing, and a third carried none. Held he
 criterion this file sets exists precisely to stop a single vivid instance becoming procedure. Promote it
 if a second session, unprompted, ends with a misdiagnosed mechanism rather than a summary.
 
+## A delegated summary is evidence; a delegated judgement is not
+
+**Would read:** what a subagent, a peer or a document *reports having seen* can be treated as evidence and
+checked cheaply; what it *concludes* cannot be inherited at all. Read the source before acting on a
+judgement, and before repeating one.
+
+**Evidence, three instances in one day, two of them at one remove.** A session sent an exploring subagent
+over a draft and got back a confident, plausible claim that the text contradicted itself on a physics
+point; opening the two passages showed it consistent, and the misleading thing was a subsection title. A
+second session described the contents of a file it had never opened, inferring them from a one-line
+pointer, and published that as a finding. A third session, the author of that file, then **repeated the
+characterisation to its own user as better than its own analysis, without opening the file it had
+written.**
+
+**Why it may be mechanism rather than carelessness:** a judgement arrives in the same shape as an
+observation, with the same confidence and none of the provenance, so nothing in the report distinguishes
+them. That is the same family as *a count is not a measurement until what was counted is named*, and if it
+promotes it probably belongs beside it.
+
+**Held because the three instances are one project on one day**, and because the strongest of them is the
+skill author's own, which makes it a class this file's keeper is inside rather than observing. Promote on a
+sighting in a second project.
+
 ## `$?` after a pipe reports the wrong command
 
 **Would read:** in a pipeline, `$?` is the exit status of the *last* command, so a guard reading it

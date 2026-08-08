@@ -503,8 +503,21 @@ which is why it is worth having as an obligation rather than as advice. A block 
 watch surfaces it, and the response is owed. Nothing has to be remembered.
 
 Say what the newcomer would otherwise reconstruct or trip over. In practice that is three things: what it
-can rely on without re-checking, because you already verified it; what of yours it is about to stand on,
-especially in paths it just claimed; and any trap in a file it claimed that the file does not advertise.
+can rely on, and **how you know**; what of yours it is about to stand on, especially in paths it just
+claimed; and any trap in a file it claimed that the file does not advertise.
+
+**Mark each statement demonstrated, observed or recalled, and never write "you can rely on this without
+re-checking".** A handover is inheritance, and inheritance is not evidence. Telling a newcomer it need not
+check is the one thing an arriving session must not be told, because it is the party with no context and
+therefore the least able to notice that a statement has gone stale. Marking how you know moves the trust
+decision to the reader, where it belongs, and costs a word.
+
+This was measured on the first arrival after the duty was written. Of the handover statements that session
+received, **two did not reproduce**, and one of them mattered: an instruction to remove a passage from a
+reusable file, where the passage was not in the file, so the real task was to avoid introducing it. A
+different work package, reached only by checking. The session that found it had run a probe with a control
+that fired, and reported both results as *demonstrated, not observed* — which is the distinction this rule
+now asks for, and it came from the sessions using the log rather than from this file.
 One session warned an arriving session that a file it had claimed one minute earlier carried scaffolding a
 later work package deletes, which is exactly the class: not a durable conclusion, not a diff-review aid,
 just a thing one live session knew and the next would have hit.
