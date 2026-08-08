@@ -19,8 +19,23 @@ subfolder — a log inside a shared history is not disposable, and the duty to m
 quietly lapses.
 
 It has to be retrofittable, since most projects were bootstrapped long before any of this existed.
-Every project the skill has touched already has `docs/`, so this is one `mkdir` in whichever session
-first needs it.
+Every project the skill has touched already has `docs/`, so this is one `mkdir` by whichever session
+arrives first — **not** by whichever session "needs it", which is a condition no session can evaluate
+and which deadlocks the whole mechanism at startup. In a project with no log, absence is ambiguous
+between "nobody coordinates here" and "nobody has registered yet", and a session that resolves that
+ambiguity toward *alone* prevents the next session from resolving it any other way. Hence
+unconditional registration on arrival: it converts an unanswerable question into a one-line append, and
+it is the only thing that gets a project from never-coordinated to coordinated.
+
+What a session actually does, first time, in an existing project:
+
+```
+docs/coordination/            <- mkdir, plus one exclude line if docs/ is tracked
+docs/coordination/log.md      <- append: date, work package, what you are about to touch
+```
+
+The second session to arrive finds that line, and coordination has begun without either session
+having had to guess.
 
 ## How much coordination, and when
 
@@ -30,9 +45,16 @@ anyone:
 
 | who is running | what is needed |
 |---|---|
-| any number **planning** | nothing — none of them can write |
-| one **implementing**, N **planning** | invalidation notices only |
+| any number **planning** | registration only — none of them can write, so no claims are needed |
+| one **implementing**, N **planning** | registration, plus invalidation notices from the implementer |
 | two or more **implementing** | the full claim protocol below |
+
+Registration is in every row, including the first, and that is not a formality. It is what makes the
+second row work: an implementer decides whether to post an invalidation notice by reading the log, so a
+planner that has not registered is a planner the implementer will not warn. Since planning writes
+nothing, a session that registers only before its first write stays invisible for the whole of the
+period in which it is most exposed — it is measuring numbers, and those are exactly what an
+invalidation notice is about. Hence registration precedes `EnterPlanMode` rather than the first write.
 
 The third row is the expensive one, and it is worth avoiding rather than managing: see *Commit
 choreography*.

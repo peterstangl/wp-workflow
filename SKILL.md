@@ -44,22 +44,37 @@ Use `args` to choose:
 
 If the user's phrasing matches one of these but they didn't name the skill, invoke anyway — getting into plan mode before code *or plan* changes is what the skill buys.
 
-**Each entry point's procedure lives in its own file, read only when that entry point is used.** Four of the five begin by calling `EnterPlanMode`; enter plan mode *first*, then read the file inside it.
+**Each entry point's procedure lives in its own file, read only when that entry point is used.** The order is always the same: **register in the coordination log, then call `EnterPlanMode`** (four of the five do), then read the procedure inside plan mode.
 
-| entry point | first action | procedure |
+| entry point | enters plan mode | procedure |
 |---|---|---|
-| `bootstrap` | `EnterPlanMode` | [references/bootstrap.md](references/bootstrap.md) |
-| `implement <WP-id>` | `EnterPlanMode` | [references/implement.md](references/implement.md) |
-| `amend-plan` | `EnterPlanMode` | [references/amend-plan.md](references/amend-plan.md) |
-| `archive-plan` | check the tree | [references/archive-plan.md](references/archive-plan.md) |
-| `retrospect` | `EnterPlanMode` | [references/retrospect.md](references/retrospect.md) |
+| `bootstrap` | yes | [references/bootstrap.md](references/bootstrap.md) |
+| `implement <WP-id>` | yes | [references/implement.md](references/implement.md) |
+| `amend-plan` | yes | [references/amend-plan.md](references/amend-plan.md) |
+| `archive-plan` | no | [references/archive-plan.md](references/archive-plan.md) |
+| `retrospect` | yes | [references/retrospect.md](references/retrospect.md) |
 
 The invariants above and the coordination rules below apply to every one of them, so they stay here rather than in any single file.
 ## Before any entry point: the coordination log
 
 The user may be running several sessions on one repo at once, each on a different WP, with no channel
 between them. Coordination is an append-only log at **`docs/coordination/`**, inheriting whatever
-storage mode `docs/` already has. Create it if absent and another session may be running.
+storage mode `docs/` already has.
+
+**Register on arrival, unconditionally, and before `EnterPlanMode`.** Append one line naming your work
+package, creating the directory if it is absent. This is the one write that precedes plan mode: it
+touches no project file, and deferring it until after plan mode would leave a planning session
+invisible for as long as planning takes, which here has run to hours.
+
+Invisible planners are the case that matters. A session that is implementing reads the log, sees
+nobody, concludes it is alone and skips its **invalidation notice** — while a planner is quietly
+measuring numbers that are about to move. That is the failure the notice exists to prevent, and
+registering only before your first *write* would not prevent it, because planning does not write.
+
+Do not first try to decide whether anyone else is running: you cannot, which is rule 2 below, and if
+every session concludes it is probably alone then no session ever registers, no log is ever created,
+and coordination never begins in a project that has not used it before. That deadlock is silent.
+Registering costs one line, and it is what makes rule 2 answerable at all.
 
 Three rules, and they are all a session needs unless two are implementing at once:
 
