@@ -1,7 +1,10 @@
 # Working alongside other sessions
 
-Read this when more than one session is actually running on the repo. A solo session needs only the
-three rules in `SKILL.md`; nothing here applies to it.
+Read this on arrival, in the same step as registering, whether or not you think another session is
+running. You cannot tell that you are alone, and the log, the watch and the timestamp discipline that
+would tell you are all specified below, so a session that defers this read defers it past the point where
+it would have helped. A genuinely solo session loses one read; a session that guessed wrong imposes its
+guess on everyone else.
 
 Everything below came out of two sessions running concurrently on one project for four hours. Almost
 none of it is invention. Every surviving **mechanism** was proposed by the user rather than designed by
@@ -92,8 +95,64 @@ file better than a file per session.
 Every block opens with one header line:
 
 ```
-## <YYYY-MM-DD HH:MM>  <identity>  <TYPE>  <one-line subject>
+## <YYYY-MM-DD HH:MM> | <from> -> <to> | <TYPE> | <one-line subject>
 ```
+
+Five things a reader can triage on **without opening the body**: when, who from, who for, what kind,
+about what. `<to>` is a session identity, a comma-separated list, or `ALL`.
+
+They sit in **four** bar-delimited fields, because the second field carries both endpoints with a `->`
+between them. That is deliberate: an arrow reads as direction where a bar reads as a boundary, and no
+session identity can contain `->`, so the field still splits mechanically. It does mean the addressee is
+matched on the **arrow**, not on a bar, which the recipes below reflect.
+
+**Separate the fields with `|`, not with whitespace.** Bars survive what spaces do not: a double space
+is invisible in a diff, collapses to one under any reflow, and stops being a separator the moment a
+subject contains two spaces of its own. With bars the header is parseable positionally — `awk -F'|'`
+for the fields, then split field 2 on `->` for the two endpoints — which is what lets a watch or a
+reader triage on it mechanically rather than by eye.
+
+Anchor an addressee match on the arrow, and allow for a list, because **naming primary recipients and
+still broadcasting is the common case, not an edge one**: `-> WP5, WP4, ALL` says "chiefly you two,
+everyone else for the record", which is worth writing. So the matcher is `grep -E -- '-> [^|]*WP4'` for
+one session and `grep -E -- '-> [^|]*ALL'` for broadcast. **Not** `grep -- '-> ALL |'`, which only sees a
+broadcast with no named recipient: measured on a live log, it caught 3 of 8 and missed every list form,
+one of them written by the session that had published the recipe four minutes earlier. And
+**not** `grep '| WP4 |'`, which matches no header at all, the addressee sharing its field with the
+sender; it does match prose *about* the recipe, so a bare count on it is not zero and reads as a
+contradiction.
+
+**A pass rule must fail open on a header it cannot parse, and absence of an addressee means everyone,
+never nobody.** This is the rule that matters most in this whole section, because breaking it is
+invisible to *both* parties at once. A session mid-close, or one that has not read the notice, keeps
+writing the previous format; a filter written for the current one then drops every block it sends, and
+neither side learns anything. The writer sees a post that went through. The reader sees a quiet log.
+"That peer has gone quiet" and "that peer has finished" look identical, and one of them means their
+release never reached you.
+
+An `INVALIDATES` announcement does not save you, and it is worth being clear about why: it is broadcast
+traffic, so it cannot reach a session that has stopped reading broadcast traffic, which is precisely the
+session whose format is stale. **The reader carries this, not the writer.** Concretely: key the pass rule
+on `^## ` and the tokens you care about anywhere in the line, never on field positions; treat a header
+with no `->` as addressed to you; and cover every separator the log contains rather than only the current
+one, since append-only guarantees the old shapes stay.
+
+That is the same rule as *a check must refuse, rather than report clean, when its input is empty*, one
+level out: an absent addressee is an empty input, and concluding "not for me" from it is reporting clean
+on nothing.
+
+**A filter has two rules, and both must fail open, which means opposite things for each.** Stating only
+the pass side is a trap, because the suppress rule is where a session is looking at its own blocks and
+therefore not thinking about what else could match. Ask instead: **when this rule misfires, who pays?**
+A pass rule that misfires loses a message, so it must fail towards showing you too much. A suppress rule
+that misfires *also* loses a message, so it must fail towards showing you something **twice**, never
+towards hiding something once. Write each so the cheap outcome is the one that happens.
+
+Concretely, the discriminating case is a **loose** self-suppression. `^## .* \| WP1 -> ` matches that
+string anywhere in the header, so it silently drops a *peer's* block whose subject quotes the form
+`| WP1 -> ALL |` — and a block about header formats is exactly the traffic you can least afford to lose.
+Anchor self-suppression on the sender field, `^## [^|]*\| *WP1 *->`, so it can only match where the
+sender actually is.
 
 **Your identity is your task, not an ordinal.** A session running this skill has exactly one job for
 its whole life, the entry point and its argument, so that is already a name: `WP3`, `WP13.3`,
@@ -109,17 +168,87 @@ session a different task. The second reason is that it carries information:
 nothing and has to be looked up. If two sessions genuinely share one task, disambiguate on whatever
 differs between them rather than by counting.
 
-**Name the peer you are answering, in the subject, and never rely on second person.** A log is a
-broadcast with no addressee, but a watch notification *arrives* like a message to you, and that
-asymmetry misleads: a session that has recently posted will read the next block's "your" and "yours"
-as its own. It happened here. A block written by one session to another, twenty-three minutes and six
-hundred lines after a third session's unrelated post, was read by that third session as a reply to
-itself, which produced a confident correction of an attribution that had been right all along. Write
-"WP3's offset bug", not "your offset bug".
+**Address every block explicitly, and write `ALL` rather than leaving it blank.** Without an addressee
+a log is a broadcast, but a watch notification *arrives* like a message to you, and that asymmetry
+misleads: a session that has recently posted reads the next block's "your" as its own. It happened
+here. A block from one session to another, twenty-three minutes and six hundred lines after a third
+session's unrelated post, was read by that third session as a reply to itself, and produced a confident
+correction of an attribution that had been right all along.
 
-The corollary is a reading rule: **a block's "you" is resolved by the block above it, not by who
-received the notification.** Before answering anything, look at what precedes it. This is also why an
-event stream is not a conversation, however much it feels like one.
+An earlier version of this file tried to fix that by asking authors to *name the peer in the subject*.
+That was too weak: prose in a subject line is optional, cannot be matched positionally, and its absence
+is ambiguous between "for everyone" and "the author forgot". A field is none of those things. `-> ALL`
+is a statement; a blank is a guess.
+
+Two consequences. **"You" in a block means its addressee**, so second person is now safe and needs no
+archaeology — the earlier rule about resolving "you" from the block above is superseded. And **triage
+becomes free**: a session sees `-> WP4` and stops, without reading a word of the body. That is what
+makes wide perception affordable, and it is the real answer to the complaint that a watch which emits
+everything costs a read per event to conclude the event was not yours. The cost was never perception;
+it was a header you could not triage on.
+
+**Changing a separator invalidates every filter written against the old one, and those filters live
+in other sessions' processes where you cannot see them.** Announce a format change as `INVALIDATES`, and
+say which shape moved. This is not hypothetical: the block announcing the bars broke the self-echo
+suppression in three sessions' watches at once, including its author's.
+
+The direction of the breakage decides how bad it is, and it is worth checking which kind you have.
+A **suppression** rule written against the old shape fails **open**: it stops matching, and you get
+noise you can see, which is what happened. A **pass** rule written against the old shape fails
+**closed**: it stops matching, the watch goes silent, and silence is indistinguishable from a quiet
+log. So a session whose filter selects on header shape should cover **both** shapes, since append-only
+means the old blocks stay as they are and only new ones carry the new separator.
+
+**Append with `>>`, and never read-modify-write a log that peers are appending to.** Reading the whole
+file, transforming it in memory and writing it back is a lost-update race: any append that lands between
+your read and your write is **erased**, silently, and the erased block belongs to someone else. Nothing in
+the log will show it, no watch will alert on it, and the author will believe their message went through.
+The append-only rule is usually explained as "never truncate"; this is the sharper form, because a
+read-modify-write does not look like a truncation and can shorten the file by exactly one peer's block.
+
+**Compose the finished line before it touches the file, rather than writing a placeholder and substituting
+it afterwards.** A placeholder is a read-modify-write with a second failure mode on top: the log is a
+corpus that discusses its own syntax, so the moment a peer writes prose *about* your placeholder, a
+first-occurrence substitution retargets onto their text. Build the header with the timestamp already in
+it, `printf '## %s | ...' "$TS"`, and append once.
+
+**And verify the append by reading it back, because a substitution step that matches nothing still exits
+0.** One session's posting helper printed `posted at <time>` unconditionally, after a replacement that had
+silently matched nothing, and the malformed header sat on disk being read by four peers while its author
+believed it was fine. This is the empty-input rule again, now in a tool rather than a checker: report what
+you read back, never what you intended to write.
+
+**The log is ordered by append, not by timestamp, so the timestamps are not monotonic.** Two sessions
+posting within the same minute land in whichever order the writes complete, and a slow write can land
+minutes out of order: one live stretch reads 13:44, 13:47, 13:45, 13:45, 13:46, 13:47. Two consequences,
+and both have bitten. **Attribute a body line to the nearest preceding header by file position**, never
+by walking forward to "the next later timestamp", which skips whole blocks. And **never infer that two
+adjacent blocks are a reply and its answer** from their order alone; the addressee field is the only
+evidence of who a block is for.
+
+**A coordination log is a corpus that discusses its own syntax, so every parser over it will eventually
+match its own documentation.** This is the single most productive source of defects the mechanism has,
+because the traffic that quotes the syntax is the traffic *about* the syntax, which is the traffic you
+least want mis-handled. Four distinct instances, all live: a published `grep` recipe returned matches
+that were prose about the recipe; a quoted claim line was replayed as a real claim; a subject containing a
+header form was silently dropped by a loose self-suppression; and a posting helper substituting its first
+match retargeted onto a peer's prose *about* that placeholder, which is the same failure on the **write**
+path and the one that damages other people's text rather than your own reading. The defence is positional
+anchoring — `^## ` for a header, `^CLAIM:` for a claim, the sender field for self-suppression — plus the
+next rule, which is the writer's half.
+
+**Never reproduce a `CLAIM:` or `RELEASE:` line at column 0 in a block that is not making that claim.**
+Indent it, inside the fence, when quoting. This is the writer's half of the owner-field rule above, and
+it stays load-bearing rather than becoming redundant: it is what protects a log whose lines carry no owner,
+which means every line written before the field was specified and every line from a session that has not
+adopted it, and a format change cannot reach a session that has stopped reading broadcast traffic. Where
+the owner is present, a quotation is harmless; where it is absent, this habit is the only defence. The
+protocol puts claims at column 0 in the body so they can
+be found without parsing prose, which means a quoted one is indistinguishable from a real one and
+transfers the apparent claim to whoever quoted it. That is not hypothetical: one session quoted another's
+claim in order to ask a question about it, and a positional parse then reported the *asking* block as
+holding all five paths. The misattribution had already travelled one hop by then, because the same two
+mechanisms compound: the quoted claim was itself picked up from the wrong header by append order.
 
 **Put the message type in the header, in capitals** — `ARRIVED`, `INVALIDATES`, `CLAIM`, `RELEASE`,
 `FINDING`, `CORRECTION`, `NOTE`, `DONE`. A watch emits header lines and nothing else, so the type is
@@ -132,7 +261,42 @@ Two different reads, for two different needs:
 
 - **The lock set** — grep or `awk` the *whole* log and replay `CLAIM:`/`RELEASE:` with last-one-wins.
   Output is a handful of paths whatever the log's size, so it costs nothing and cannot miss a block you
-  skipped.
+  skipped. Three details decide whether the replay is right, and each has been got wrong in practice:
+
+  **Write the owner in the line, and replay per `(owner, path)`:**
+  `CLAIM: paper/refs.bib, paper/paper.tex | WP5`. Strip the trailing `| owner`, then split the paths on
+  commas. This field is not new — it is in this file's own example above — but it appeared only inside a
+  paragraph making a different point, while this recipe said nothing about it, so every session wrote
+  `CLAIM: <paths>` and the replay had no owner to key on. **An example is not a specification**, and a
+  field documented only by illustration will not be used.
+
+  **Replay per path, never per line.** A multi-path claim is not an atom, and string equality between a
+  claim line and a release line is a coincidence the format never guaranteed: a claim of five paths
+  released one at a time stays "held" forever under a line-keyed replay. For an ownerless legacy line,
+  fall back to the nearest *preceding* header by file position, since append order is not timestamp order.
+
+  **Why the owner field is load-bearing rather than decorative, and why "the state of the log" is not a
+  thing.** A quoted claim line makes the quoting session an apparent claimant, and what that costs
+  depends entirely on how the replay keys. Measured on one live log, five paths, genuine claim eleven
+  minutes before the quotation:
+
+  ```
+  keyed on path alone        the quoting session holds all five; the genuine holder holds NOTHING
+  keyed on (sender, path)    two claimants per path; the genuine claim survives intact
+  ```
+
+  Both parsers are defensible and they disagree about who holds the files, so **the lock set is a
+  property of the log *and* the parser, never of the log alone.** Say which replay produced a holder
+  before acting on one. Reporting one parser's output as "the state" is the same defect as reporting a
+  match count without naming what was counted, one level up.
+
+  With the owner in the line, both pathologies go away and so does an exotic-looking rule. A quotation
+  replays to its true owner, so it creates no claimant at all; and where a spurious claim does exist, its
+  author simply releases it, because the release keys to `(author, path)` and cannot touch
+  `(true holder, path)`. **The apparent property that a phantom claim is irreparable by its author, and
+  that only the true holder can repair it by re-asserting, is an artefact of the missing owner field, not
+  a property of append-only logs.** It is worth knowing only because a log written without the field has
+  it.
 - **The prose** — read incrementally from an offset stored in a **file** in your scratchpad. Context is
   exactly what a long gap destroys, so an offset held in context is worthless after one.
 
@@ -144,6 +308,11 @@ longer, and setting the offset to the new end marks as read everything a peer ap
 looked. The same failure has a second form: reading from a *pattern match* rather than from the stored
 offset, then declaring the file read, which silently swallows the whole prefix between the offset and
 the match. Both are silent, and both were committed in practice, in two projects, on the same day.
+
+**Arm the watch to replay from the beginning, not from the current end.** Output is bounded by the log's
+size once, and it costs a session nothing it was not already required to read; arming at the end buys a
+few lines of quiet at the price of a silent prefix. This is the form `SKILL.md` states as an action at
+registration, and the reason follows.
 
 **Arming a watch is not reading.** A watch started at the current end of file has just set an offset
 to a position nobody read, and it will report only what arrives afterwards. Every block already in the
@@ -235,24 +404,40 @@ pgrep -fc 'zzz-no-such-watcher-zzz'                    # -> 1   the naive form
 pgrep -fa 'zzz-no-such-watcher-zzz' | grep -vc pgrep   # -> 0   the working form
 ```
 
+**The thing to regress is whatever you just added.** The rule reaches further than predicates: a
+*fixture* is not coverage until something fails when the fixture goes unseen. One session found a blind
+spot in its own checker, added a specimen from the blind class, and stopped — and measured that with the
+specimen present and nothing asserting on it, the broken checker still exited 0. **A specimen nobody
+checks is decoration**, and it is the guarded defect one level up, since the fixture's presence is
+indistinguishable in the output from the fixture being examined.
+
 The naive predicate returns 1 for a pattern that matches **nothing**, so it is provably incapable of
 reporting "not running" — shown in one command, at the moment the check is written, with no reasoning
 required.
 
-**Narrow a convenience, never a guarantee.** A watch that emits every peer header costs its user a read
-per event to conclude the event was not theirs, so narrowing it is right. What makes narrowing *safe* is
-that read-on-return is untouched underneath: the filter drops timeliness, not delivery. Test the new
-filter on a fixture in both directions before arming it — the lines that must pass and the lines that
-must drop — and confirm the old watch is gone and the new one running, or you have two.
+**Do not solve a narration problem by reducing perception.** A watch that emits every peer header is
+tiring: each event costs a read to conclude it was not yours, and it is tempting to narrow the filter.
+That is the wrong layer. The complaint is that you are *reporting* too much; the fix is to report less,
+not to see less. **Seeing everything and forwarding little is strictly better than seeing little**,
+because the judgement about what matters is then made by you with the evidence in hand rather than by a
+grep pattern without it. One session narrowed its watch for exactly this reason, then widened it back
+within twelve minutes on exactly this reasoning.
 
-**A filter is a reachability contract, so publish what it drops, not only what it passes.** An unstated
-filter is indistinguishable from a peer who has gone quiet, and quiet is indistinguishable from absent,
-which is the failure this whole file circles. Say it in the log: *to reach me, name my identity in your
-header, claim one of these paths, or use `INVALIDATES`; anything else I will see late.* Keep
-`INVALIDATES` and any log-integrity `ALERT` passing unconditionally from anyone, since those are
-precisely the messages a narrowed filter would otherwise lose. The author of this paragraph narrowed a
-watch to suppress its own posts and never published that, so a peer wondering why a message had not
-landed had no way to find out.
+If you do narrow it anyway, two conditions, and the first was learned by its violation. **Verify the
+guarantee underneath is actually running before you thin the convenience on top of it.** The same
+session justified narrowing on the grounds that read-on-return was "unchanged" — while having treated
+one of nine mid-turn user messages as a return point. It was relying on the watch as its sole delivery
+mechanism, calling it best-effort, and thinning it. An assumed guarantee is not a guarantee, and this is
+the *stated premise* of a rule going unchecked rather than a number going unchecked. Second, **publish
+what the filter drops, not only what it passes**: an unstated filter is indistinguishable from a peer
+who has gone quiet, and quiet is indistinguishable from absent. Keep `INVALIDATES` and any
+log-integrity `ALERT` passing unconditionally from anyone. Test the filter on a fixture in both
+directions before arming, and confirm the old watch is gone and the new one up, or you have two.
+
+Publishing it means saying so in the log, concretely: *to reach me, address a block to me or to `ALL`,
+claim one of these paths, or use `INVALIDATES`; anything else I will see late.* The author of this
+paragraph narrowed a watch to suppress its own posts and never published that, so a peer wondering why a
+message had not landed had no way to find out.
 
 That also puts the watch in its proper place. **Read-on-return is mandatory; the watch is
 best-effort.** A dead watch then costs only mid-turn timeliness, never correctness, because the next
@@ -410,6 +595,18 @@ while several of its *reports* were false, and the difference was that every gua
 into a separate step and read before it was believed, while every false report had been co-authored
 with its own evidence. Another published a byte count of `1722` where the file said `1721`, having
 composed the sentence from a measurement taken before an edit it then made in the same breath.
+
+**A check must refuse, not report clean, when its input is empty.** A verification that finds nothing
+must distinguish *the specimen is clean* from *there was no specimen*, and treat the second as fatal
+rather than passing. An empty specimen, an empty reference, a glob that matched no files, a pattern that
+matched nothing because the text moved: each produces the same silence as a genuinely clean result, and
+no attention to the output recovers the difference, because the difference is not in the output.
+
+Promoted from a candidate on four instances across three sessions and two distinct mechanisms: a
+phrase-based sweep blind to wrapped text, an empty bibliography file, an empty comparison bucketed as
+non-fatal, and a regex requiring an uppercase initial that silently skipped three bibliographic keys,
+including the one carrying a register's most consequential attribution, and then reported clean. **Every one reported success because of what it could not see.** The fix each time was
+the rule below: run the check in the state where it must fail.
 
 **A check's characteristic failure is to confirm the hypothesis it was testing.** A broken check
 reports the defect it was looking for, and that reads as a finding rather than as a fault. Verifying

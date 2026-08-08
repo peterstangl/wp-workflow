@@ -30,7 +30,8 @@ These four rules apply everywhere in this skill and override anything below that
 - **Do not convene a fleet for what one command answers.** The asked session routed that question through five agents, when `git show --stat HEAD -- 'numerics/test_*.py'` settles it in two seconds. Delegation is for breadth, not for thoroughness theatre.
 - **Do not hedge where you could have a fact.** Rather than wait, the asking session told the user "I don't think it did" — a guess offered where two seconds of checking was available.
 
-**4. Only an `implement` session implements.** A work package's deliverables are produced, and its box checked `[x]`, only inside an `implement <WP-id>` session that has passed its own per-WP `ExitPlanMode` and run that WP's verification. `bootstrap` and `amend-plan` author plans, never code — every WP they write ships `[ ]`, however small it looks and even if this session believes it could satisfy it now. This rule lives here, not in the generated `CLAUDE.md`: the "one session per WP" line there cannot bind the bootstrap session that is only now writing it. It does not re-gate a session's own closing bookkeeping — `implement` Step 5 refining upcoming WPs and calling `archive-plan` in-line are that session's already-approved work, not a second entry point's.
+**4. Only an `implement` session implements.** A work package's deliverables are produced, and its box checked `[x]`, only inside an `implement <WP-id>` session that has passed its own per-WP `ExitPlanMode` and run that WP's verification. `bootstrap` and `amend-plan` author plans, never code — every WP they write ships `[ ]`, however small it looks and even if this session believes it could satisfy it now. **That naming is an example, not the scope**: the first sentence says *only* inside an `implement` session, so it binds `retrospect` and `archive-plan` equally, and a reader who takes the second sentence as the enumeration will conclude the unnamed entry points are unconstrained. One session read it that way and asked, which
+is the only reason it surfaced; had it concluded instead of asking, nothing would have. Note that `retrospect` *does* write files — this skill's own, under `~/.claude/skills/`, authorised by the exception in invariant 2 — which is what makes the confusion available: the test is never whether a session writes, it is whether what it writes is a work package's deliverable. This rule lives here, not in the generated `CLAUDE.md`: the "one session per WP" line there cannot bind the bootstrap session that is only now writing it. It does not re-gate a session's own closing bookkeeping — `implement` Step 5 refining upcoming WPs and calling `archive-plan` in-line are that session's already-approved work, not a second entry point's.
 
 ## Picking the entry point
 
@@ -44,15 +45,21 @@ Use `args` to choose:
 
 If the user's phrasing matches one of these but they didn't name the skill, invoke anyway — getting into plan mode before code *or plan* changes is what the skill buys.
 
-**Each entry point's procedure lives in its own file, read only when that entry point is used.** The order is always the same: **register in the coordination log, then call `EnterPlanMode`** (four of the five do), then read the procedure inside plan mode.
+**Each entry point's procedure lives in its own file, read only when that entry point is used.** The order is always the same: **register in the coordination log and read the coordination reference, then call `EnterPlanMode`** (four of the five do), then read the procedure inside plan mode.
 
-| entry point | enters plan mode | procedure |
-|---|---|---|
-| `bootstrap` | yes | [references/bootstrap.md](references/bootstrap.md) |
-| `implement <WP-id>` | yes | [references/implement.md](references/implement.md) |
-| `amend-plan` | yes | [references/amend-plan.md](references/amend-plan.md) |
-| `archive-plan` | no | [references/archive-plan.md](references/archive-plan.md) |
-| `retrospect` | yes | [references/retrospect.md](references/retrospect.md) |
+| entry point | enters plan mode | read at registration | procedure |
+|---|---|---|---|
+| `bootstrap` | yes | [references/parallel-sessions.md](references/parallel-sessions.md) | [references/bootstrap.md](references/bootstrap.md) |
+| `implement <WP-id>` | yes | [references/parallel-sessions.md](references/parallel-sessions.md) | [references/implement.md](references/implement.md) |
+| `amend-plan` | yes | [references/parallel-sessions.md](references/parallel-sessions.md) | [references/amend-plan.md](references/amend-plan.md) |
+| `archive-plan` | no | [references/parallel-sessions.md](references/parallel-sessions.md) | [references/archive-plan.md](references/archive-plan.md) |
+| `retrospect` | yes | [references/parallel-sessions.md](references/parallel-sessions.md) | [references/retrospect.md](references/retrospect.md) |
+
+The third column repeats deliberately. A session that read only its own row still sees it, and the table is
+the part of this file that is demonstrably acted on: asked afterwards, a session that had missed the
+coordination reference entirely reported reading `SKILL.md`, "which the Skill tool loads", and its own
+procedure file, "because the router named it for my entry point". Prose telling a reader to go and read
+something else is what that session skipped, so the pointer belongs in the structure that worked.
 
 The invariants above and the coordination rules below apply to every one of them, so they stay here rather than in any single file.
 ## Before any entry point: the coordination log
@@ -66,6 +73,25 @@ package, creating the directory if it is absent. This is the one write that prec
 touches no project file, and deferring it until after plan mode would leave a planning session
 invisible for as long as planning takes, which here has run to hours.
 
+**Do these five things as you register.** They are here rather than in the reference because this file is
+loaded for you and the reference is read only if you choose to read it, and because every one of them,
+omitted, is paid by a *peer* rather than by you. Each was measured on one repository in one day.
+
+1. **Arm a watch on the log, replaying from the beginning rather than from the current end**, and re-arm
+   it whenever control returns from the user. Arming at the end silently declares everything above it
+   read. A rule you must remember to run is not a channel: one session took four mid-turn messages
+   without reading and ran forty minutes blind, missing a claim takeover inside its own files.
+2. **Take every timestamp from `date`; never compose one.** The two sessions running without a watch
+   wrote every one of the four blocks dated ahead of the clock, because nothing was showing them the
+   real time.
+3. **Keep your read offset in a file**, never in context, since context is exactly what a long gap
+   destroys.
+4. **Put the owner in each `CLAIM:` and `RELEASE:` line** (`CLAIM: <paths> | <you>`) and spell the paths
+   identically in both. A release that does not match its claim string never clears it, and a claim with
+   no owner cannot be told from a quotation of someone else's.
+5. **Append with `>>` and nothing else.** Never read the log, transform it and write it back: any peer's
+   append landing between your read and your write is erased, with no gap, no shrinkage and no alert.
+
 Invisible planners are the case that matters. A session that is implementing reads the log, sees
 nobody, concludes it is alone and skips its **invalidation notice** — while a planner is quietly
 measuring numbers that are about to move. That is the failure the notice exists to prevent, and
@@ -76,11 +102,17 @@ every session concludes it is probably alone then no session ever registers, no 
 and coordination never begins in a project that has not used it before. That deadlock is silent.
 Registering costs one line, and it is what makes rule 2 answerable at all.
 
-Three rules, and they are all a session needs unless two are implementing at once:
+Three rules govern reading the log, and with the five actions above they are all a session needs unless
+two are implementing at once:
 
-1. **Read it whenever control returns from you to the user** — a prompt, an `AskUserQuestion` answer,
-   an `ExitPlanMode` approval *or rejection*. Those are the only moments you can have sat idle, so they
-   are the only moments the world can have moved without you noticing.
+1. **Read it at every point where the user has acted.** The principle, not the list: any moment the
+   user speaks or answers is a moment you may have been idle and the world may have moved, and it is the
+   only signal you get, since you cannot perceive elapsed time. That includes a fresh prompt, an
+   `AskUserQuestion` answer, an `ExitPlanMode` approval *or rejection*, **and a message that arrives
+   mid-turn while you are working** — which is the one a closed list invites you to skip. One session
+   took four mid-turn messages without treating any as a return point and ran forty minutes blind,
+   missing a claim takeover inside its own files. If in doubt whether something counts, it counts; the
+   read is one command.
 2. **You cannot know you are alone without looking**, so that read comes before any conclusion about
    who else is running.
 3. **Announce before writing anything a peer might also be editing**, and check the log's claim lines
@@ -88,8 +120,25 @@ Three rules, and they are all a session needs unless two are implementing at onc
 
 Everything else — the message vocabulary, the watch that turns the log into a push channel, commit
 choreography, and a list of designs that were tried and discarded — is in
-[references/parallel-sessions.md](references/parallel-sessions.md). Read it when more than one session
-is actually running; skip it otherwise.
+[references/parallel-sessions.md](references/parallel-sessions.md). **Read it in the same step as
+registering, unconditionally, and do not try to decide first whether you need it.**
+
+The reason is the one that makes registration unconditional, one level up. Deciding whether you need it
+means deciding whether anyone else is running, which is rule 2's unanswerable question, and the log, the
+watch and the timestamp discipline that would answer it are all specified in that file. So a conditional
+read is a read that happens after the damage. Measured across five sessions on one repository, a
+conditional gate opened for nobody on the skill's own account: two sessions read the file in full only
+after a human told them a peer existed, one never opened it and inferred its contents from the sentence
+pointing at it. Be exact about what that cost, because most of the same day's defects had other causes:
+the two sessions that never read it ran with **no watch at all**, and produced every block that was dated
+ahead of the clock. Both costs landed on peers rather than on them, which is the asymmetry that makes the
+read unconditional. The sessions that *had* read it still wrote broken watch filters, and every session
+including this file's author filed claim lines nobody could attribute to an owner. **So reading is
+necessary and is not sufficient**, and this rule does not claim otherwise: a caution interrupts an error,
+only a mechanism prevents it.
+
+At roughly 11k tokens it is much the largest read in this skill. **That is the file's problem to fix by
+being shorter, never this rule's to fix by being conditional.**
 
 ---
 

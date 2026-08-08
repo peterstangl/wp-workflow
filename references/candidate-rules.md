@@ -24,22 +24,17 @@ like any other.
 
 ---
 
-## A check must refuse, not report clean, when its input is empty
+## ~~A check must refuse, not report clean, when its input is empty~~ — PROMOTED
 
-**Would read:** a verification that finds nothing must distinguish *"the specimen is clean"* from
-*"there was no specimen"*, and refuse in the second case. An empty specimen, an empty reference, a glob
-that matched no files, a grep pattern that matched nothing because the file moved: each yields the same
-silent pass as a genuinely clean result.
-
-**Evidence, one project.** In `project-2026-inputshifts` an audit floor was reported as having fired
-when the underlying query had returned 43 rows rather than 0; the check could not tell the two states
-apart. It sat beneath the single sentence that `docs/LITERATURE.md` labels its strongest claim, so the
-consequence was not hypothetical.
-
-**Why it is mechanism and not carelessness:** the failing and passing states are indistinguishable in
-the check's own output, so no amount of attention to that output recovers the difference. It is the
-same family as *a check's characteristic failure is to confirm the hypothesis it was testing* in
-[parallel-sessions.md](parallel-sessions.md), and would likely be folded in beside it.
+Moved into [parallel-sessions.md](parallel-sessions.md) on 2026-08-08. Promoted on **four instances
+across three sessions and two distinct mechanisms**, which satisfies the session clause of the
+criterion even though all four arose in one project: a phrase-based sweep blind to wrapped text, an
+empty bibliography file, an empty comparison bucketed as non-fatal, and a regex requiring an uppercase
+initial that silently skipped three bibliographic keys and reported clean. The strongest of the four is
+the last, and not for the reason first recorded here: it was **already shipped in the committed code of
+the very session that had identified the class**, undetected, and reported clean four times in that
+session's own status updates before a *different* session found it. A class its own discoverer is
+simultaneously committing is general, not local.
 
 ## `$?` after a pipe reports the wrong command
 
@@ -69,6 +64,36 @@ the counter had counted names matching its regex rather than names carrying the 
 header count of 45 was accepted where the file held 48. Both counts were real numbers of the wrong
 thing.
 
-**Caveat on promotion:** the two instances are from sessions that had been talking to each other for
-hours, so they are not independent in the sense the criterion requires. A genuinely separate occurrence
-is still wanted.
+**Third instance, 2026-08-08, self-identified by one of the same sessions and by a different
+mechanism:** a resolved-key total moved from 97 to 98 not because the bibliography changed but because
+newly added selftest fixtures cite three real keys. The reporter named it as an instance of this very
+rule — the total is a property of the file *plus what you count*, and it moved for a reason unrelated to
+the quantity it appears to measure.
+
+**Fourth instance, 2026-08-08, a different session and a fourth mechanism: a self-referential corpus.**
+A published `grep` recipe was found to be broken by a peer who tested it. Verifying the fix, the broken
+pattern returned **3** matches where the claim was that it matched nothing — and all three were prose
+*discussing the broken pattern*, including the sentence that published it. Zero were block headers, so
+the claim was true of the object it was about and false as a bare number. Naming what was counted was
+what separated them, and the correction was about to ship with the unqualified "matches nothing" in it.
+
+**Fifth instance, same session, same mechanism as the fourth.** A broadcast-coverage count was reported
+as 5 of 12 and was 3 of 8, the pattern being unanchored and so counting prose about the recipe as headers.
+It repeats a mechanism rather than adding one, which is worth recording precisely because a repeat inside
+one session is what the promotion criterion is designed to discount.
+
+**Sixth instance, same session, and a fifth mechanism that is the most general form yet: a real count of
+a real thing, reported as a property of the object rather than of the instrument.** A claim replay keyed
+on path alone returned a holder; keyed on `(owner, path)` it returned a different one. Both parsers are
+defensible, so there is no fact of the matter about "who holds the file" independent of the parser, and
+the output was reported as the state of the log. Nothing was miscounted. The error was the omitted clause
+naming which instrument produced it.
+
+**Promotion judgement.** This now stands at six instances across four sessions and **five** distinct
+mechanisms: a regex matching a shared prefix, a header count against a different total, a total moved by
+newly added fixtures, a corpus containing prose about its own search pattern, and an instrument-dependent
+result reported as instrument-independent. That meets
+the standard the first promotion in this file was held to, and the independence caveat above is
+answered on mechanism rather than on session identity: four mechanisms cannot be one project's habit.
+**Proposed for promotion, not promoted** — a candidate is moved by the entry point that reads this file,
+with the user's approval, and shipping it silently would be the defect the file exists to prevent.
