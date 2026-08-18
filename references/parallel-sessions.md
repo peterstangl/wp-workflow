@@ -86,6 +86,16 @@ message that looked missing. One of them had actually run `date`, seen `02:21`, 
 anyway. The general form is worth more than the rule: **anything with no source in your context must
 come from a tool call, and when a tool disagrees with your intuition the tool is not a suggestion.**
 
+**That rule governs where the number comes from, not whether it arrived.** `printf '## %s | ...' >> log`
+with no argument yields an empty timestamp field while exiting 0, and an `echo "posted at $TS"` beside
+it prints the right time from the variable that never reached the file. So **guard the composed line,
+not the variable**: build the header with the timestamp already in it, refuse to append unless it
+starts with a four-digit year, and run that guard once against a blank header so you have seen it fire.
+
+**When the defect is in the mechanism you would use to report it, fix the mechanism first.** A
+correction inherits every defect of the channel it travels through, and it is the one a reader
+trusts.
+
 Order the log by **append position**, never by the timestamps in the headers. Append order is also what
 arbitrates two sessions racing for the same claim, which is the one property that makes a single shared
 file better than a file per session.
@@ -327,6 +337,17 @@ looked. The same failure has a second form: reading from a *pattern match* rathe
 offset, then declaring the file read, which silently swallows the whole prefix between the offset and
 the match. Both are silent, and both were committed in practice, in two projects, on the same day.
 
+**General form: any step that advances an offset without delivering content converts "not yet seen"
+into "already seen", silently.** Writing is one such step, a pattern match is another, and a third is
+a **watch that emits headers and advances past the prose between them** — which is what the
+emit-headers-only rule below produces if that same position is also the read offset. It then means
+*scanned*, not *read*.
+
+So **keep a scan position and a read position as separate quantities**; one variable holding both is
+always lying about one of them. **Emit the line number with every header**, so an event carries the
+locator its prose needs after the position has moved past it. And when in doubt, enumerate
+`grep -nE '^## '` — a fact about the file, where an offset is only a claim about your own attention.
+
 **Arm the watch to replay from the beginning, not from the current end.** Output is bounded by the log's
 size once, and it costs a session nothing it was not already required to read; arming at the end buys a
 few lines of quiet at the price of a silent prefix. This is the form `SKILL.md` states as an action at
@@ -428,10 +449,35 @@ over-counts, because the shells that launched and check the watch carry the patt
 lines. Measured: three matches for a single watch, and the checking shell was not among them. A heartbeat
 answers the actual question, and it is the difference between inferring liveness and measuring it.
 
-Write it under `docs/coordination/heartbeat/<your identity>`, touched on every poll of the loop you have
-already got. Then a peer's test is `mtime` against a small multiple of the poll interval, which is
-**measured rather than declared**: the interval is a number you chose and can read, not a staleness
-threshold invented to look principled.
+Write it under `docs/coordination/heartbeat/<your identity>` on every poll of the loop you have
+already got, and **write the poll interval into it** (`printf 'poll=%s\n' "$POLL" > "$HB"`) rather
+than touching an empty file. Then a peer's test is `mtime` against a small multiple of that interval,
+which is **measured rather than declared**.
+
+The interval has to be **in** the file: an empty heartbeat leaves the peer — the party this rule is
+written for — with no interval to read and a threshold to invent, which is the declared cut wearing a
+measured cut's clothes.
+
+**Never commit a heartbeat, and exclude the directory as part of the same step that creates it.**
+Two lines beside the `mkdir`, idempotent, so a project acquires the rule whenever it acquires the
+mechanism:
+
+```bash
+mkdir -p docs/coordination/heartbeat
+grep -qxF 'docs/coordination/heartbeat/' .gitignore 2>/dev/null \
+  || printf '\n# Liveness heartbeats: mtime is the whole signal, and git stores no mtime.\ndocs/coordination/heartbeat/\n' >> .gitignore
+```
+
+It belongs *here* rather than only in `bootstrap.md`, because coordination is retrofitted into repos
+bootstrapped long before it existed: the directory is created by whichever session arrives first, and
+a rule living only in bootstrap reaches none of them. Under the exclude-only and symlink storage
+modes `docs/coordination/` is already excluded wholesale, so this matters exactly when the log is
+tracked.
+
+**Why committing one is worse than untidy:** a heartbeat is 0 bytes, so its entire signal is the
+**mtime** — and git stores no mtime. On clone every file gets the *checkout* time, so a committed
+heartbeat comes back looking freshly touched and asserts that a long-dead session is alive. The
+fail-open property below holds only while a *present* heartbeat cannot lie.
 
 **It fails open, and this is the half that makes it safe.** No heartbeat means *unknown*, never *dead*: a
 session may simply not be running a watch, which was true of two sessions out of five on the day this was

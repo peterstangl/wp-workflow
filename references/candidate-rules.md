@@ -142,3 +142,31 @@ the standard the first promotion in this file was held to, and the independence 
 answered on mechanism rather than on session identity: four mechanisms cannot be one project's habit.
 **Proposed for promotion, not promoted** — a candidate is moved by the entry point that reads this file,
 with the user's approval, and shipping it silently would be the defect the file exists to prevent.
+
+## A query keyed on a guessed identifier returns a confident, well-formed zero
+
+**Would read:** when a count comes from a query keyed on an *identifier* — an author id, a ticket key, a
+BAI, a slug — the identifier is part of the instrument, and a wrong one produces a legitimate-looking
+zero rather than an error. So **name the identifier beside the number, and run a control that must come
+back non-zero.** A zero from a wrong key is indistinguishable from a real absence by inspection of the
+output, which is the property that makes it dangerous.
+
+**Evidence, two instances, one session (2026-08-18).** A session checking whether an applicant had ever
+collaborated with two named people at a prospective host queried INSPIRE by author BAI. It used
+`D.Straub.1` as a control for a known collaborator and got **0 joint papers** — the real BAI is
+`D.M.Straub.1`, which returns 10. Having fixed that, it resolved "Christopher Smith" to `C.Smith.4`, an
+author with 2 records, and reported zeros; the person meant was `C.Smith.1` at LPSC Grenoble, with 70
+records and a real citation relationship in both directions. Both zeros were plausible, both were
+publishable-looking, and both were caught only because a control had been written that was *required* to
+be non-zero.
+
+**Why it is not yet a rule.** Both instances are one session's, and this file is explicit that one
+session's habits produce correlated failures. It is also close to, but not the same as, the promoted
+*a check must refuse when its input is empty*: there the input was empty, here the input was fine and
+the **selector** was wrong, so the check had a genuine specimen and still answered about the wrong
+object. Promote if a second session meets it — the natural place is any workflow that resolves names to
+ids before counting.
+
+**What makes it worth keeping rather than filing under carelessness:** the fix is structural and cheap.
+A control with a known non-zero answer costs one extra query and converts a silent wrong answer into a
+loud one, which is the same shape as *run the check in the state where it must fail*.

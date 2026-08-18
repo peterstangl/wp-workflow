@@ -1,0 +1,12 @@
+# --- Inter-session coordination (wp-workflow) ---
+# Liveness heartbeats: one file per session, rewritten on every poll of that session's
+# log watch. Its whole signal is the mtime, and git does not store mtime — a tree object
+# carries mode, type, sha and name, nothing else. On clone every file gets the checkout
+# time, so a committed heartbeat comes back looking freshly touched and asserts that a
+# long-dead session is alive. "No heartbeat means unknown, never dead" is only safe while
+# a heartbeat that IS present cannot lie.
+docs/coordination/heartbeat/
+
+# NOTE: docs/coordination/log.md is deliberately NOT listed here. Whether the log is
+# tracked is a per-project decision (see bootstrap.md); the heartbeat directory is not —
+# it is runtime state under every storage mode.

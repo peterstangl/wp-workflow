@@ -139,8 +139,10 @@ including this file's author filed claim lines nobody could attribute to an owne
 necessary and is not sufficient**, and this rule does not claim otherwise: a caution interrupts an error,
 only a mechanism prevents it.
 
-At roughly 11k tokens it is much the largest read in this skill. **That is the file's problem to fix by
-being shorter, never this rule's to fix by being conditional.**
+At **~14k tokens** (`wc -c` / 4, measured 2026-08-18) it is by far the largest read in this skill.
+**Re-measure before quoting that figure** — the previous one sat here at 11k while the file grew 23%
+past it. **The size is the file's problem to fix by being shorter, never this rule's to fix by being
+conditional.**
 
 ---
 
